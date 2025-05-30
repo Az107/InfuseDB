@@ -42,7 +42,7 @@ impl Server {
                     let r = reader.read_line(&mut buff);
                     if r.is_err() || r.unwrap() == 0 {
                         println!("client disconnected");
-                        db_clone.lock().unwrap().dump();
+                        let _ = db_clone.lock().unwrap().dump();
                         break;
                     }
                     let r = {

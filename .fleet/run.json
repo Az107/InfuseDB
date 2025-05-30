@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "type": "cargo",
+            "name": "Server",
+            "workingDir": "CaddyDB/",
+            "cargoArgs": ["run"],
+            "executableArgs": ["-s"]
+        }
+    ]
+}
