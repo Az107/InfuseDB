@@ -1,5 +1,5 @@
 use crate::command::Command;
-use crate::CaddyDB;
+use crate::InfuseDB;
 use std::{
     io::{BufRead, BufReader, Write},
     net::{SocketAddr, TcpListener},
@@ -9,12 +9,12 @@ use std::{
 
 pub struct Server {
     addr: SocketAddr,
-    db: Arc<Mutex<CaddyDB>>,
+    db: Arc<Mutex<InfuseDB>>,
 }
 
 impl Server {
     pub fn new(host: &str, port: usize) -> Result<Self, &'static str> {
-        let db = CaddyDB::load("default.mdb").unwrap();
+        let db = InfuseDB::load("default.mdb").unwrap();
         let server = Server {
             addr: format!("{}:{}", host, port)
                 .parse()

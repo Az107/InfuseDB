@@ -1,3 +1,4 @@
 [workspace]
-members = [ "CaddyClient","CaddyDB", "CaddyDB-py"]
+members = ["InfuseDB", "InfuseDB-py", "InfuseDBClient"]
+# members = ["InfuseDBClient", "InfuseDB", "InfuseDB-py"]
 resolver = "2"

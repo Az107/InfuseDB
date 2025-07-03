@@ -1,7 +1,7 @@
-use caddydb::utils;
+use infusedb::utils;
 
-use crate::caddydb::{Collection, DataType};
 use crate::doc;
+use crate::infusedb::{Collection, DataType};
 
 pub trait Command {
     fn run(&mut self, command: &str) -> Result<DataType, &'static str>;

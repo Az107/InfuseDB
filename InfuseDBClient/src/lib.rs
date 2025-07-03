@@ -13,7 +13,7 @@ impl Client {
             .parse()
             .map_err(|_| "Invalid address")?;
         let mut stream = TcpStream::connect(addr).map_err(|_| "Error connecting to host")?;
-        stream.read_to_string(&mut String::new());
+        let _ = stream.read_to_string(&mut String::new());
         Ok(Client { stream })
     }
 }
