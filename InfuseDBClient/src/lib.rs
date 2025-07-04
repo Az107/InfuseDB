@@ -60,7 +60,6 @@ impl Client {
 
     pub fn close(&mut self) {
         let _ = self.stream.shutdown(std::net::Shutdown::Both);
-        drop(self);
     }
 }
 

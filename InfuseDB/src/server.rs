@@ -35,7 +35,7 @@ impl Server {
             thread::spawn(move || {
                 let mut socket = socket.unwrap();
                 println!("new client");
-                let _ = socket.write_all("CaddyDB\n".as_bytes());
+                let _ = socket.write_all("InfuseDB\n".as_bytes());
                 let mut reader = BufReader::new(socket.try_clone().unwrap());
                 loop {
                     let mut buff = String::new();

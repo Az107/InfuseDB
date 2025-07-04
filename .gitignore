@@ -203,6 +203,6 @@ build/
 # already existing elements were commented out
 
 #/target
-/caddydb/target
-/caddydb-py/target
+/infosedb/target
+/infosedb-py/target
 *.mdb
