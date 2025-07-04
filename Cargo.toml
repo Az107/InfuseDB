@@ -1,4 +1,3 @@
 [workspace]
 members = ["InfuseDB", "InfuseDB-py", "InfuseDBClient"]
-# members = ["InfuseDBClient", "InfuseDB", "InfuseDB-py"]
 resolver = "2"
