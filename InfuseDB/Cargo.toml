@@ -1,16 +1,17 @@
 [package]
 
 
-name = "CaddyDB"
+name = "InfuseDB"
 version = "0.2.0"
 edition = "2021"
+
 [lib]
-name = "caddydb"
-path = "src/caddydb/mod.rs"
+name = "infusedb"
+path = "src/infusedb/mod.rs"
 
 
 [[bin]]
-name = "caddydb"
+name = "infusedb"
 path = "src/main.rs"
 
 [dependencies]

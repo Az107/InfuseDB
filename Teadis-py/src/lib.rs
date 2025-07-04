@@ -1,4 +1,4 @@
-use caddydb::CaddyDB;
+use db::CaddyDB;
 use pyo3::{
     exceptions::{PyFileNotFoundError, PyValueError},
     prelude::*,
@@ -8,8 +8,8 @@ use pyo3::{
 use std::sync::{Arc, Mutex};
 
 /// Wrapper in Rust to expose CaddyDB for Python
-#[pyclass(name = "CaddyDB")]
-struct CaddyDBpy {
+#[pyclass(name = "Teadis")]
+struct Teadispy {
     inner: Arc<Mutex<CaddyDB>>,
 }
 
@@ -20,11 +20,11 @@ struct Collection {
 }
 
 #[pymethods]
-impl CaddyDBpy {
+impl Teadispy {
     #[new]
     fn new() -> Self {
-        CaddyDBpy {
-            inner: Arc::new(Mutex::new(CaddyDB::new())),
+        Teadispy {
+            inner: Arc::new(Mutex::new(Teadis::new())),
         }
     }
 

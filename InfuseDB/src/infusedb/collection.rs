@@ -1,7 +1,7 @@
 use crate::utils;
 
 // Writen by Alberto Ruiz 2024-03-08
-// The collection module will provide the collection of documents for the CaddyDB
+// The collection module will provide the collection of documents for the InfuseDB
 // The collection will store the documents in memory and provide a simple API to interact with them
 // The Document will be a HashMap<String, DataType>
 //

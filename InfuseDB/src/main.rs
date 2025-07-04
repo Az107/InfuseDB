@@ -1,9 +1,9 @@
-mod caddydb;
 mod command;
+mod infusedb;
 mod server;
 
-use caddydb::{utils, CaddyDB, DataType};
 use command::Command;
+use infusedb::{DataType, InfuseDB, utils};
 use std::io::Write;
 use std::path::Path;
 use std::{env, io};
@@ -28,13 +28,13 @@ fn format_data_type(data: DataType) -> String {
 }
 
 fn main() {
-    let mut db = CaddyDB::new();
+    let mut db = InfuseDB::new();
     if !Path::new(DEFAULT_PATH).exists() {
         db.path = DEFAULT_PATH.to_string();
     } else {
-        db = CaddyDB::load(DEFAULT_PATH).unwrap();
+        db = InfuseDB::load(DEFAULT_PATH).unwrap();
     }
-    println!("CaddyDB {}", db.version);
+    println!("InfuseDB {}", db.version);
     if db.get_collection(DEFAULT_COLLECTION_NAME).is_none() {
         let _ = db.create_collection(DEFAULT_COLLECTION_NAME);
     }
