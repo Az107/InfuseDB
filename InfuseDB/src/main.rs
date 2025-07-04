@@ -3,7 +3,7 @@ mod infusedb;
 mod server;
 
 use command::Command;
-use infusedb::{DataType, InfuseDB, utils};
+use infusedb::{utils, DataType, InfuseDB, VERSION};
 use std::io::Write;
 use std::path::Path;
 use std::{env, io};
@@ -34,7 +34,7 @@ fn main() {
     } else {
         db = InfuseDB::load(DEFAULT_PATH).unwrap();
     }
-    println!("InfuseDB {}", db.version);
+    println!("InfuseDB {}", VERSION);
     if db.get_collection(DEFAULT_COLLECTION_NAME).is_none() {
         let _ = db.create_collection(DEFAULT_COLLECTION_NAME);
     }

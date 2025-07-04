@@ -1,5 +1,7 @@
 use crate::command::Command;
 use crate::InfuseDB;
+use crate::VERSION;
+
 use std::{
     io::{BufRead, BufReader, Write},
     net::{SocketAddr, TcpListener},
@@ -35,7 +37,8 @@ impl Server {
             thread::spawn(move || {
                 let mut socket = socket.unwrap();
                 println!("new client");
-                let _ = socket.write_all("InfuseDB\n".as_bytes());
+                let header = format!("InfuseDB {}\n", VERSION);
+                let _ = socket.write_all(header.as_bytes());
                 let mut reader = BufReader::new(socket.try_clone().unwrap());
                 loop {
                     let mut buff = String::new();

@@ -9,6 +9,8 @@ pub use collection::Collection;
 pub use data_type::DataType;
 use std::fs;
 
+pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 pub struct InfuseDB {
     pub version: &'static str,
     pub path: String,
@@ -18,7 +20,7 @@ pub struct InfuseDB {
 impl InfuseDB {
     pub fn new() -> Self {
         InfuseDB {
-            version: env!("CARGO_PKG_VERSION"),
+            version: VERSION,
             path: "./default.mdb".to_string(),
             collections: Vec::new(),
         }
