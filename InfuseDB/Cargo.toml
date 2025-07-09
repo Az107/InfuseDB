@@ -5,6 +5,9 @@ name = "InfuseDB"
 version = "0.2.0"
 edition = "2021"
 
+[features]
+server = ["dep:mio"]
+
 [lib]
 name = "infusedb"
 path = "src/infusedb/mod.rs"
@@ -15,9 +18,10 @@ name = "infusedb"
 path = "src/main.rs"
 
 [dependencies]
+mio = { version = "1.0.4", features = ["net", "os-poll"], optional = true }
 serde = "1.0.217"
 serde_json = "1.0.138"
 
 [dependencies.uuid]
 version = "1.12.1"
-features = ["v4"]
+features = ["v4", "js"]

@@ -1,14 +1,15 @@
 mod command;
 mod infusedb;
+#[cfg(feature = "server")]
 mod server;
 
 use command::Command;
 use infusedb::{utils, DataType, InfuseDB, VERSION};
+#[cfg(feature = "server")]
+use server::Server;
 use std::io::Write;
 use std::path::Path;
 use std::{env, io};
-
-use server::Server;
 
 const DEFAULT_PATH: &str = "default.mdb";
 const DEFAULT_COLLECTION_NAME: &str = "default";
@@ -101,10 +102,12 @@ fn main() {
             }
         }
     } else {
+        #[cfg(feature = "server")]
         if args[1] == "-s" {
             let mut server = Server::new("0.0.0.0", 1234).expect("vaia");
             println!("Starting server on 1234");
             let _ = server.listen();
+
             return;
         }
         let command = args.clone()[1..].to_vec().join(" ");
