@@ -57,7 +57,7 @@ impl InfuseDB {
         }
 
         Ok(InfuseDB {
-            version: env!("CARGO_PKG_VERSION"),
+            version: VERSION,
             collections,
             path: path.to_string(),
         })
@@ -65,7 +65,6 @@ impl InfuseDB {
 
     pub fn dump(&self) -> Result<(), &str> {
         let mut result = String::new();
-        //TODO:
         for collection in self.collections.iter() {
             let page = collection.dump();
             result.push_str(page.as_str());

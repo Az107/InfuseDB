@@ -14,7 +14,7 @@ impl Command for Collection {
         let args: Vec<String> = command.iter().skip(1).cloned().collect();
         return match action.as_str() {
             "list" => Ok(DataType::Document(self.list())),
-            "count" => Ok(DataType::Number(self.count() as i32)),
+            "count" => Ok(DataType::Number(self.count() as f32)),
             "set" => {
                 if args.len() < 2 {
                     return Err("No enought args");

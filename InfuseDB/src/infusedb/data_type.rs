@@ -10,7 +10,7 @@ use uuid::Uuid;
 pub enum DataType {
     Id(Uuid),
     Text(String),
-    Number(i32),
+    Number(f32),
     Boolean(bool),
     Array(Vec<DataType>),
     Document(Document),
@@ -75,7 +75,7 @@ impl DataType {
             _ => panic!("Not a Text"),
         }
     }
-    pub fn to_number(&self) -> i32 {
+    pub fn to_number(&self) -> f32 {
         match self {
             DataType::Number(number) => *number,
             _ => panic!("Not a Number"),
@@ -104,7 +104,7 @@ impl DataType {
         let raw = raw.trim();
         if Uuid::parse_str(raw).is_ok() {
             1
-        } else if raw.parse::<i32>().is_ok() {
+        } else if raw.parse::<f32>().is_ok() {
             3
         } else if raw.to_lowercase().as_str() == "true" || raw.to_lowercase().as_str() == "false" {
             4
@@ -127,7 +127,7 @@ impl DataType {
             }
             2 => Some(DataType::Text(raw.trim_matches('"').to_string())),
             3 => {
-                let n = raw.parse::<i32>();
+                let n = raw.parse::<f32>();
                 if n.is_err() {
                     return None;
                 }
@@ -226,9 +226,15 @@ impl From<&str> for DataType {
     }
 }
 
+impl From<f32> for DataType {
+    fn from(value: f32) -> Self {
+        DataType::Number(value)
+    }
+}
+
 impl From<i32> for DataType {
     fn from(value: i32) -> Self {
-        DataType::Number(value)
+        DataType::Number(value as f32)
     }
 }
 

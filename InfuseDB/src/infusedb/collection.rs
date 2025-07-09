@@ -61,7 +61,7 @@ impl DocumentJson for Document {
                     match value {
                         Value::Number(n) => document.insert(
                             "id".to_string(),
-                            DataType::Number(n.as_i64().unwrap() as i32),
+                            DataType::Number(n.as_f64().unwrap() as f32),
                         ),
                         Value::String(s) => document.insert("id".to_string(), DataType::Text(s)),
                         Value::Bool(b) => document.insert("id".to_string(), DataType::Boolean(b)),
@@ -72,7 +72,7 @@ impl DocumentJson for Document {
                 match value {
                     Value::Number(n) => document.insert(
                         key.to_string(),
-                        DataType::Number(n.as_i64().unwrap() as i32),
+                        DataType::Number(n.as_f64().unwrap() as f32),
                     ),
                     Value::String(s) => document.insert(key.to_string(), DataType::Text(s)),
                     Value::Bool(b) => document.insert(key.to_string(), DataType::Boolean(b)),
@@ -284,12 +284,12 @@ fn test_dump() {
     let header = "[prueba]\n";
     let kv_name = "2 name Juan";
     let kv_surname = "2 surname Perez";
-    let kv_age = "3 age 15";
+    let kv_age = "3 age 15.0";
 
     let mut collection = Collection::new("prueba");
     collection.add("name", DataType::Text("Juan".to_string()));
     collection.add("surname", DataType::Text("Perez".to_string()));
-    collection.add("age", DataType::Number(15));
+    collection.add("age", DataType::Number(15.0)); //TODO: allow use 15 as float
     let dump = collection.dump();
     assert!(dump.starts_with(header));
     assert!(dump.contains(kv_name));
