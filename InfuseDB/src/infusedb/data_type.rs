@@ -37,6 +37,27 @@ impl DataType {
         }
     }
 
+    pub fn set(&mut self, index: &str, dt: DataType) -> Result<DataType, &'static str> {
+        match self {
+            DataType::Id(_) => Err("Not supported"),
+            DataType::Text(_) => Err("Not supported"),
+            DataType::Number(_) => Err("Not supported"),
+            DataType::Boolean(_) => Err("Not supported"),
+            DataType::Array(vec) => {
+                if let Ok(index) = index.parse::<usize>() {
+                    vec[index] = dt;
+                    Ok(self.clone())
+                } else {
+                    Err("Invalid index")
+                }
+            }
+            DataType::Document(doc) => {
+                doc.insert(index.to_string(), dt);
+                Ok(self.clone())
+            }
+        }
+    }
+
     pub fn concat(&self, b: DataType) -> Option<Self> {
         if !matches!(self, DataType::Array(_)) && b.get_type() != self.get_type() {
             return None;

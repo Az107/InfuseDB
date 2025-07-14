@@ -181,6 +181,26 @@ impl Collection {
         return self;
     }
 
+    pub fn add_subkey(&mut self, key: &str, subkey: &str, value: DataType) -> &mut Self {
+        if let Some(dt) = self.data.get_mut(key) {
+            let _ = dt.set(subkey, value); //TODO: better error handling
+        } else {
+            if let Ok(index) = subkey.parse::<usize>() {
+                //Array
+                let mut v = Vec::new();
+                v[index] = value;
+                let dt = DataType::Array(v);
+                self.data.insert(key.to_string(), dt);
+            } else {
+                //Object
+                let mut d = Document::new();
+                d.insert(subkey.to_string(), value);
+                self.data.insert(key.to_string(), DataType::Document(d));
+            }
+        }
+        return self;
+    }
+
     pub fn rm(&mut self, key: &str) {
         //self.data.remove(index);
         self.data.remove(key);

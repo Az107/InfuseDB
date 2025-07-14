@@ -20,6 +20,7 @@ impl Command for Collection {
                     return Err("No enought args");
                 }
                 let key = args.get(0).unwrap().as_str();
+                // let sub_key: Vec<&str> = key.split(':').skip(1).collect().join("");
                 let value = args.get(1).unwrap().to_string();
                 let t = DataType::infer_type(&value);
                 let d = DataType::load(t, value).ok_or("Unable to parse value")?;
