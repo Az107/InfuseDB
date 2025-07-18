@@ -39,12 +39,11 @@ impl DataType {
 
     pub fn set(&mut self, index: &str, dt: DataType) -> Result<DataType, &'static str> {
         match self {
-            DataType::Id(_) => Err("Not supported"),
-            DataType::Text(_) => Err("Not supported"),
-            DataType::Number(_) => Err("Not supported"),
-            DataType::Boolean(_) => Err("Not supported"),
             DataType::Array(vec) => {
                 if let Ok(index) = index.parse::<usize>() {
+                    while index > vec.len() - 1 {
+                        vec.push(DataType::Text("".to_string()));
+                    }
                     vec[index] = dt;
                     Ok(self.clone())
                 } else {
@@ -55,6 +54,7 @@ impl DataType {
                 doc.insert(index.to_string(), dt);
                 Ok(self.clone())
             }
+            _ => Err("Not supported"),
         }
     }
 
@@ -131,6 +131,8 @@ impl DataType {
             4
         } else if raw.starts_with('[') && raw.ends_with(']') {
             5
+        } else if raw.starts_with('{') && raw.ends_with('}') {
+            6
         } else {
             2
         }
@@ -163,9 +165,10 @@ impl DataType {
                 let mut new_vec = Vec::new();
                 let raw = raw.strip_suffix(']').unwrap().strip_prefix('[').unwrap();
                 let mut open_array = false;
+                let mut open_string = false;
                 let mut sub_raw = String::new();
                 for chr in raw.chars() {
-                    if chr == ',' && !open_array {
+                    if chr == ',' && !open_array && !open_string {
                         let t = Self::infer_type(&sub_raw);
                         let r = Self::load(t, sub_raw.clone());
                         if r.is_some() {
@@ -180,6 +183,9 @@ impl DataType {
                     if chr == ']' && open_array {
                         open_array = false;
                     }
+                    if chr == '"' {
+                        open_string = !open_string
+                    }
                     sub_raw.push(chr);
                 }
                 if !sub_raw.is_empty() {
@@ -191,6 +197,49 @@ impl DataType {
                 }
 
                 Some(DataType::Array(new_vec))
+            }
+            6 => {
+                let mut d = Document::new();
+                let raw = raw.strip_suffix('}').unwrap().strip_prefix('{').unwrap();
+                let mut key = String::new();
+                let mut key_done = false;
+                let mut open_array = false;
+                let mut open_string = false;
+                let mut value = String::new();
+                for chr in raw.chars() {
+                    if chr == ':' && !key_done {
+                        key_done = true;
+                        continue;
+                    }
+                    if key_done {
+                        if chr == ',' && !open_array && !open_string {
+                            let t = Self::infer_type(&value);
+                            let r = Self::load(t, value.clone());
+                            if r.is_some() {
+                                d.insert(key, r.unwrap());
+                                key = String::new();
+                                value = String::new();
+                                key_done = false;
+                                continue;
+                            }
+                        }
+
+                        if chr == '[' && !open_array {
+                            open_array = true;
+                        }
+                        if chr == ']' && open_array {
+                            open_array = false;
+                        }
+                        if chr == '"' {
+                            open_string = !open_string
+                        }
+
+                        value.push(chr);
+                    } else {
+                        key.push(chr);
+                    }
+                }
+                Some(DataType::Document(d))
             }
             _ => None,
         }
@@ -217,12 +266,15 @@ impl ToString for DataType {
             }
             DataType::Document(document) => {
                 let mut result = String::new();
+                result.push('{');
                 for (key, value) in document {
                     result.push_str(&key);
                     result.push_str(": ");
                     result.push_str(&value.to_string());
                     result.push_str(", ");
                 }
+                result.push('}');
+
                 result
             }
         }

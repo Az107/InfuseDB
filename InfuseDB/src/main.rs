@@ -58,7 +58,7 @@ fn main() {
             if action == "exit" {
                 break;
             } else if action == "select" {
-                if db.get_collection_list().contains(&args[0]) {
+                if args.len() >= 1 && db.get_collection_list().contains(&args[0]) {
                     selected = args[0].clone()
                 } else {
                     println!("Collection don't exists");
