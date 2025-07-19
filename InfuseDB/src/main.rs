@@ -14,13 +14,20 @@ use std::{env, io};
 const DEFAULT_PATH: &str = "default.mdb";
 const DEFAULT_COLLECTION_NAME: &str = "default";
 
-fn format_data_type(data: DataType) -> String {
+fn format_data_type(data: DataType, sub: u32) -> String {
     match data {
         DataType::Document(doc) => {
             let mut r = String::new();
-            for (key, val) in doc {
-                r.push_str(&format!("{}: {}\n", &key, &format_data_type(val)));
+            if sub > 0 {
+                r.push('\n');
             }
+            for (key, val) in doc {
+                for _ in 0..sub {
+                    r.push(' ');
+                }
+                r.push_str(&format!("{}: {}\n", &key, &format_data_type(val, sub + 1)));
+            }
+
             r
         }
         // DataType::Array(list) => format!("[{}]", format_data_type(list[0].clone())),
@@ -96,7 +103,7 @@ fn main() {
             let collection = db.get_collection(selected.as_str()).unwrap();
             let r = collection.run(&buffer);
             if r.is_ok() {
-                println!("{}", format_data_type(r.unwrap()));
+                println!("{}", format_data_type(r.unwrap(), 0));
             } else {
                 println!("{:?}", r.err());
             }
@@ -114,7 +121,7 @@ fn main() {
         let collection = db.get_collection(DEFAULT_COLLECTION_NAME).unwrap();
         let r = collection.run(&command);
         if r.is_ok() {
-            println!("{}", format_data_type(r.unwrap()));
+            println!("{}", format_data_type(r.unwrap(), 0));
         } else {
             println!("{:?}", r.err());
         }

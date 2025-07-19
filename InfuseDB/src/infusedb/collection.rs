@@ -1,5 +1,5 @@
+use crate::d;
 use crate::utils;
-
 // Writen by Alberto Ruiz 2024-03-08
 // The collection module will provide the collection of documents for the InfuseDB
 // The collection will store the documents in memory and provide a simple API to interact with them
@@ -302,15 +302,16 @@ fn test_collection() {
 #[test]
 fn test_dump() {
     let header = "[prueba]\n";
-    let kv_name = "2 name Juan";
-    let kv_surname = "2 surname Perez";
+    let kv_name = "2 name \"Juan\"";
+    let kv_surname = "2 surname \"Perez\"";
     let kv_age = "3 age 15";
 
     let mut collection = Collection::new("prueba");
-    collection.add("name", DataType::Text("Juan".to_string()));
-    collection.add("surname", DataType::Text("Perez".to_string()));
-    collection.add("age", DataType::Number(15));
+    collection.add("name", d!("Juan"));
+    collection.add("surname", d!("Perez"));
+    collection.add("age", d!(15));
     let dump = collection.dump();
+    println!("{}", dump);
     assert!(dump.starts_with(header));
     assert!(dump.contains(kv_name));
     assert!(dump.contains(kv_surname));

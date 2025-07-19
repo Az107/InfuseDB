@@ -16,6 +16,19 @@ pub enum DataType {
     Document(Document),
 }
 
+#[macro_export]
+macro_rules! d {
+    // Para arrays/vecs, aplica el macro recursivamente a cada elemento
+    ([$( $elem:tt ),* $(,)?]) => {
+        $crate::DataType::Array(vec![$( $crate::DataType::from($elem) ),*])
+    };
+
+    // Para expresiones simples, asume que hay un From<T> para DataType
+    ($val:expr) => {
+        $crate::DataType::from($val)
+    };
+}
+
 impl DataType {
     pub fn get_type(&self) -> &str {
         match self {
@@ -216,7 +229,7 @@ impl DataType {
                             let t = Self::infer_type(&value);
                             let r = Self::load(t, value.clone());
                             if r.is_some() {
-                                d.insert(key, r.unwrap());
+                                d.insert(key.trim().to_string(), r.unwrap());
                                 key = String::new();
                                 value = String::new();
                                 key_done = false;
@@ -237,6 +250,13 @@ impl DataType {
                         value.push(chr);
                     } else {
                         key.push(chr);
+                    }
+                }
+                if !key.is_empty() && !value.is_empty() {
+                    let t = Self::infer_type(&value);
+                    let r = Self::load(t, value.clone());
+                    if r.is_some() {
+                        d.insert(key.trim().to_string(), r.unwrap());
                     }
                 }
                 Some(DataType::Document(d))
@@ -334,5 +354,23 @@ impl Clone for DataType {
             DataType::Array(array) => DataType::Array(array.clone()),
             DataType::Document(document) => DataType::Document(document.clone()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DataType;
+
+    #[test]
+    fn test_macro() {
+        let dd = d!("Hello");
+        let expected = DataType::from("Hello");
+        assert!(dd == expected);
+        let dd = d!(10);
+        let expected = DataType::from(10);
+        assert!(dd == expected);
+        let dd = d!(["hello", 10]);
+        let expected = DataType::from(vec![d!("hello"), d!(10)]);
+        assert!(dd == expected);
     }
 }
