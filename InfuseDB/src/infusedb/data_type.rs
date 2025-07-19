@@ -71,31 +71,6 @@ impl DataType {
         }
     }
 
-    pub fn concat(&self, b: DataType) -> Option<Self> {
-        if !matches!(self, DataType::Array(_)) && b.get_type() != self.get_type() {
-            return None;
-        }
-        let result;
-        match self {
-            DataType::Text(text) => {
-                let mut new_text = text.clone();
-                new_text.push_str(b.to_text());
-                result = DataType::Text(new_text.clone());
-            }
-            DataType::Number(num) => {
-                let new_num = num + b.to_number();
-                result = DataType::Number(new_num)
-            }
-            DataType::Array(list) => {
-                let mut new_list = list.clone();
-                new_list.push(b);
-                result = DataType::Array(new_list);
-            }
-            _ => return None,
-        };
-        return Some(result);
-    }
-
     //add into
     pub fn to_id(&self) -> Uuid {
         match self {

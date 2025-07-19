@@ -105,7 +105,7 @@ fn main() {
             if r.is_ok() {
                 println!("{}", format_data_type(r.unwrap(), 0));
             } else {
-                println!("{:?}", r.err());
+                println!("err: {}", r.err().unwrap_or("???"));
             }
         }
     } else {
