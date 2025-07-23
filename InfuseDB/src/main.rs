@@ -1,4 +1,5 @@
 mod command;
+mod help_const;
 mod infusedb;
 #[cfg(feature = "server")]
 mod server;
@@ -55,7 +56,11 @@ fn main() {
             let mut buffer = String::new();
             let _ = io::stdin().read_line(&mut buffer);
             let command: Vec<String> = utils::smart_split(buffer.clone());
-            let action = command.get(0).unwrap();
+            let action = command.get(0);
+            if action.is_none() {
+                continue;
+            }
+            let action = action.unwrap();
             let args = if command.len() > 0 {
                 command.clone()[1..].to_vec()
             } else {
@@ -94,6 +99,20 @@ fn main() {
                     println!("No collection name provided");
                 }
                 continue;
+            } else if action == "commit" {
+                let r = db.dump();
+                if r.is_err() {
+                } else {
+                    println!("Changed saved");
+                }
+                continue;
+            } else if action == "help" {
+                if selected.is_empty() {
+                    println!("{}", help_const::HELP_STR_MAIN);
+                } else {
+                    println!("{}", help_const::HELP_STR_COL);
+                }
+                continue;
             }
 
             if selected == "" {
@@ -102,11 +121,11 @@ fn main() {
             }
             let collection = db.get_collection(selected.as_str()).unwrap();
             let r = collection.run(&buffer);
-            if r.is_ok() {
-                println!("{}", format_data_type(r.unwrap(), 0));
-            } else {
-                println!("err: {}", r.err().unwrap_or("???"));
-            }
+            let output = match r {
+                Ok(result) => format!("{}", format_data_type(result, 0)),
+                Err(err) => format!("{:?}", err.to_string()),
+            };
+            println!("{}", output);
         }
     } else {
         #[cfg(feature = "server")]
@@ -119,12 +138,16 @@ fn main() {
         }
         let command = args.clone()[1..].to_vec().join(" ");
         let collection = db.get_collection(DEFAULT_COLLECTION_NAME).unwrap();
-        let r = collection.run(&command);
-        if r.is_ok() {
-            println!("{}", format_data_type(r.unwrap(), 0));
-        } else {
-            println!("{:?}", r.err());
+        if command == "help" {
+            println!("{}", help_const::HELP_STR_COL);
+            return;
         }
+        let r = collection.run(&command);
+        let output = match r {
+            Ok(result) => format!("{}", format_data_type(result, 0)),
+            Err(err) => format!("{:?}", err.to_string()),
+        };
+        println!("{}", output);
     }
 
     let _ = db.dump();

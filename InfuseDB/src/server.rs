@@ -3,17 +3,14 @@ use crate::infusedb::DataType;
 use crate::InfuseDB;
 use crate::VERSION;
 
-use mio::event::Event;
 use mio::net::{TcpListener, TcpStream};
-use mio::{Events, Interest, Poll, Registry, Token};
-use std::array;
+use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
 
 use std::{
-    io::{BufRead, BufReader, Read, Write},
+    io::{Read, Write},
     net::SocketAddr,
     sync::{Arc, Mutex},
-    thread,
 };
 
 pub struct Server {
@@ -32,11 +29,9 @@ fn process_request(db: &Arc<Mutex<InfuseDB>>, collection: String, cmd: &str) -> 
         db.get_collection(&collection).unwrap().run(cmd)
     };
 
-    if r.is_ok() {
-        let r = r.unwrap();
-        r.to_string()
-    } else {
-        r.err().unwrap().to_string()
+    match r {
+        Ok(result) => result.to_string(),
+        Err(err) => err.to_string(),
     }
 }
 
@@ -142,21 +137,24 @@ impl Server {
                                 let cmd = str::from_utf8(&data).unwrap();
                                 let cmd_result: Result<DataType, ProcessError> =
                                     process_cmd(cmd, ctx, &self.db);
-                                let result: Result<DataType, &str> = match cmd_result {
+                                let result: Result<DataType, String> = match cmd_result {
                                     Ok(result) => Ok(result),
                                     Err(err) => match err {
-                                        ProcessError::InvalidCommand => Err("Invalid Command"),
+                                        ProcessError::InvalidCommand => {
+                                            Err("Invalid Command".to_string())
+                                        }
                                         ProcessError::NotFound => {
                                             if let Some(collection) = ctx.collection.clone() {
                                                 self.db
                                                     .get_collection(&collection)
                                                     .unwrap()
                                                     .run(cmd)
+                                                    .map_err(|err| err.to_string())
                                             } else {
-                                                Err("No collection selected")
+                                                Err("No collection selected".to_string())
                                             }
                                         }
-                                        ProcessError::Other(text) => Err(text),
+                                        ProcessError::Other(text) => Err(text.to_string()),
                                     },
                                 };
 

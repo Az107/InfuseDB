@@ -1,3 +1,5 @@
+use std::usize;
+
 // Written by Alberto Ruiz 2024-03-08
 // The data type module will provide the data types for the InfuseDB
 // this will be store several types of data, like text, numbers, dates, arrays and documents
@@ -41,12 +43,46 @@ impl DataType {
         }
     }
 
-    pub fn get(&self, n: usize) -> DataType {
-        //WIP 🚧
-        if matches!(self, DataType::Array(_)) {
-            return self.to_array().get(n).unwrap().clone();
-        } else {
-            return self.clone();
+    pub fn get(&self, index: &str) -> Option<&DataType> {
+        match self {
+            DataType::Array(v) => {
+                let n = index.parse::<usize>().ok()?;
+                v.get(n)
+            }
+            DataType::Document(d) => d.get(index),
+            _ => None,
+        }
+    }
+
+    pub fn get_mut(&mut self, index: &str) -> Option<&mut DataType> {
+        match self {
+            DataType::Array(v) => {
+                let n = index.parse::<usize>().ok()?;
+                v.get_mut(n)
+            }
+            DataType::Document(d) => d.get_mut(index),
+            _ => None,
+        }
+    }
+
+    pub fn find(&self, sub_key: &str, value: DataType) -> Option<DataType> {
+        let mut result: Vec<DataType> = Vec::new();
+        match self {
+            DataType::Array(v) => {
+                for item in v {
+                    let sub_item = item.get(sub_key);
+                    if sub_item.is_none() {
+                        continue;
+                    }
+                    let sub_item = sub_item.unwrap();
+                    if *sub_item == value {
+                        result.push(item.clone());
+                    }
+                }
+                return Some(DataType::Array(result));
+            }
+            // DataType::Document(d) => d.get_mut(index),
+            _ => None,
         }
     }
 
@@ -54,7 +90,7 @@ impl DataType {
         match self {
             DataType::Array(vec) => {
                 if let Ok(index) = index.parse::<usize>() {
-                    while index > vec.len() - 1 {
+                    while index >= vec.len() {
                         vec.push(DataType::Text("".to_string()));
                     }
                     vec[index] = dt;
@@ -65,6 +101,23 @@ impl DataType {
             }
             DataType::Document(doc) => {
                 doc.insert(index.to_string(), dt);
+                Ok(self.clone())
+            }
+            _ => Err("Not supported"),
+        }
+    }
+    pub fn remove(&mut self, index: &str) -> Result<DataType, &'static str> {
+        match self {
+            DataType::Array(vec) => {
+                if let Ok(index) = index.parse::<usize>() {
+                    vec.remove(index);
+                    Ok(self.clone())
+                } else {
+                    Err("Invalid index")
+                }
+            }
+            DataType::Document(doc) => {
+                doc.remove(index);
                 Ok(self.clone())
             }
             _ => Err("Not supported"),
@@ -154,9 +207,11 @@ impl DataType {
                 let raw = raw.strip_suffix(']').unwrap().strip_prefix('[').unwrap();
                 let mut open_array = false;
                 let mut open_string = false;
+                let mut open_bracket = 0;
+
                 let mut sub_raw = String::new();
                 for chr in raw.chars() {
-                    if chr == ',' && !open_array && !open_string {
+                    if chr == ',' && !open_array && !open_string && open_bracket == 0 {
                         let t = Self::infer_type(&sub_raw);
                         let r = Self::load(t, sub_raw.clone());
                         if r.is_some() {
@@ -170,6 +225,12 @@ impl DataType {
                     }
                     if chr == ']' && open_array {
                         open_array = false;
+                    }
+                    if chr == '{' {
+                        open_bracket += 1;
+                    }
+                    if chr == '}' {
+                        open_bracket -= 1;
                     }
                     if chr == '"' {
                         open_string = !open_string
@@ -191,8 +252,9 @@ impl DataType {
                 let raw = raw.strip_suffix('}').unwrap().strip_prefix('{').unwrap();
                 let mut key = String::new();
                 let mut key_done = false;
-                let mut open_array = false;
+                let mut open_array = 0;
                 let mut open_string = false;
+                let mut open_bracket = 0;
                 let mut value = String::new();
                 for chr in raw.chars() {
                     if chr == ':' && !key_done {
@@ -200,7 +262,7 @@ impl DataType {
                         continue;
                     }
                     if key_done {
-                        if chr == ',' && !open_array && !open_string {
+                        if chr == ',' && open_array == 0 && !open_string && open_bracket == 0 {
                             let t = Self::infer_type(&value);
                             let r = Self::load(t, value.clone());
                             if r.is_some() {
@@ -212,11 +274,17 @@ impl DataType {
                             }
                         }
 
-                        if chr == '[' && !open_array {
-                            open_array = true;
+                        if chr == '[' {
+                            open_array += 1;
                         }
-                        if chr == ']' && open_array {
-                            open_array = false;
+                        if chr == ']' {
+                            open_array -= 1;
+                        }
+                        if chr == '{' {
+                            open_bracket += 1;
+                        }
+                        if chr == '}' {
+                            open_bracket -= 1
                         }
                         if chr == '"' {
                             open_string = !open_string
@@ -255,7 +323,7 @@ impl ToString for DataType {
                     result.push_str(&value.to_string());
                     result.push_str(", ");
                 }
-                let mut result = result.strip_suffix(", ").unwrap().to_string();
+                let mut result = result.strip_suffix(", ").unwrap_or(&result).to_string();
                 result.push(']');
                 result
             }
@@ -268,6 +336,8 @@ impl ToString for DataType {
                     result.push_str(&value.to_string());
                     result.push_str(", ");
                 }
+                result.pop();
+                result.pop();
                 result.push('}');
 
                 result

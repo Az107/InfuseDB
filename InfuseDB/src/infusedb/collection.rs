@@ -7,13 +7,8 @@ use super::data_type::DataType;
 use crate::utils;
 use std::collections::HashMap;
 
-// const ID: &str = "ID";
-
-//create a trait based on HashMap<String,DataType>
-// and impl especial methods for it
 pub type Document = HashMap<String, DataType>;
 
-//create a macro to create a document
 #[macro_export]
 macro_rules! doc {
   ( $( $key: expr => $value: expr ),* ) => {
@@ -21,7 +16,7 @@ macro_rules! doc {
          use std::collections::HashMap;
         let mut map = HashMap::new();
         $(
-            map.insert($key.to_string(), DataType::from($value)); // Update this line
+            map.insert($key.to_string(), DataType::from($value));
         )*
         DataType::Document(map)
     }
@@ -30,7 +25,7 @@ macro_rules! doc {
 
 pub struct Collection {
     pub name: String,
-    pub(crate) data: HashMap<String, DataType>,
+    pub(crate) data: DataType,
     //b_tree: BNode
 }
 
@@ -50,46 +45,26 @@ impl Collection {
     pub fn new(name: &str) -> Self {
         Collection {
             name: name.to_string(),
-            data: HashMap::new(), //b_tree: BNode::new(),
+            data: DataType::Document(Document::new()),
+            //b_tree: BNode::new(),
         }
     }
 
     pub fn add(&mut self, key: &str, value: DataType) -> &mut Self {
-        self.data.insert(key.to_string(), value);
-        return self;
-    }
-
-    pub fn add_subkey(&mut self, key: &str, subkey: &str, value: DataType) -> &mut Self {
-        if let Some(dt) = self.data.get_mut(key) {
-            let _ = dt.set(subkey, value); //TODO: better error handling
-        } else {
-            if let Ok(index) = subkey.parse::<usize>() {
-                //Array
-                let mut v = Vec::new();
-                v[index] = value;
-                let dt = DataType::Array(v);
-                self.data.insert(key.to_string(), dt);
-            } else {
-                //Object
-                let mut d = Document::new();
-                d.insert(subkey.to_string(), value);
-                self.data.insert(key.to_string(), DataType::Document(d));
-            }
-        }
+        let _ = self.data.set(key, value);
         return self;
     }
 
     pub fn rm(&mut self, key: &str) {
-        //self.data.remove(index);
-        self.data.remove(key);
+        let _ = self.data.remove(key);
     }
 
     pub fn count(&self) -> usize {
-        self.data.len()
+        self.data.to_document().len()
     }
 
     pub fn list(&self) -> HashMap<String, DataType> {
-        return self.data.clone();
+        return self.data.to_document().clone();
     }
 
     pub fn get(&mut self, key: &str) -> Option<&DataType> {
@@ -99,7 +74,7 @@ impl Collection {
     pub fn dump(&self) -> String {
         let mut result = String::new();
         result.push_str(format!("[{}]\n", self.name).as_str());
-        for (k, v) in self.data.iter() {
+        for (k, v) in self.data.to_document().iter() {
             let t = match v.get_type() {
                 "id" => "1",
                 "text" => "2",
