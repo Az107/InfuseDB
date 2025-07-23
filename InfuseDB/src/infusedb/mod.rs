@@ -7,6 +7,7 @@ mod data_type;
 pub mod utils;
 pub use collection::Collection;
 pub use data_type::DataType;
+pub use data_type::FindOp; //TODO: change to own trait and file
 use std::fs;
 
 pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");

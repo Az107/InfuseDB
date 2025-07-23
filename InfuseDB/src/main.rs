@@ -4,10 +4,12 @@ mod infusedb;
 #[cfg(feature = "server")]
 mod server;
 
-use command::Command;
-use infusedb::{utils, DataType, InfuseDB, VERSION};
 #[cfg(feature = "server")]
 use server::Server;
+
+use command::Command;
+use infusedb::{utils, DataType, InfuseDB, VERSION};
+
 use std::io::Write;
 use std::path::Path;
 use std::{env, io};

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use infusedb::utils;
 
 use crate::doc;
-use crate::infusedb::{Collection, DataType};
+use crate::infusedb::{Collection, DataType, FindOp};
 
 pub trait Command {
     fn run(&mut self, command: &str) -> Result<DataType, CommandError>;
@@ -86,7 +86,7 @@ impl Command for Collection {
                     return Err(CommandError::NoEnoughArgs);
                 }
                 let proto_key = args.get(0).unwrap().as_str();
-                let is_search = args.len() == 5 && args[1] == "where" && args[3] == "is"; //TODO: improve the comparison selector
+                let is_search = args.len() == 5 && args[1] == "where"; //TODO: improve the comparison selector
 
                 let keys: Vec<&str> = proto_key.split('.').collect();
                 let value = self.get(keys[0]).ok_or(CommandError::KeyNotFound(
@@ -143,7 +143,14 @@ impl Command for Collection {
                         return Err(CommandError::ErrorParsing);
                     }
                     let value = v.unwrap();
-                    match get_result.find(&sub_key, value) {
+                    let op = match args[3].as_str() {
+                        "==" | "is" => FindOp::Eq,
+                        "isnot" | "notis" | "!=" => FindOp::NotEq,
+                        ">" | "gt" => FindOp::Gt,
+                        "<" | "lt" => FindOp::Lt,
+                        _ => return Err(CommandError::ErrorParsing),
+                    };
+                    match get_result.find(&sub_key, op, value) {
                         Some(d) => Ok(d.clone()),
                         None => Err(CommandError::KeyNotFound(sub_key, "Search".to_string())),
                     }

@@ -8,6 +8,13 @@ use std::usize;
 use super::collection::Document;
 use uuid::Uuid;
 
+pub enum FindOp {
+    Eq,
+    NotEq,
+    Gt,
+    Lt,
+}
+
 #[derive(PartialEq, Debug)]
 pub enum DataType {
     Id(Uuid),
@@ -65,7 +72,7 @@ impl DataType {
         }
     }
 
-    pub fn find(&self, sub_key: &str, value: DataType) -> Option<DataType> {
+    pub fn find(&self, sub_key: &str, op: FindOp, value: DataType) -> Option<DataType> {
         let mut result: Vec<DataType> = Vec::new();
         match self {
             DataType::Array(v) => {
@@ -75,13 +82,21 @@ impl DataType {
                         continue;
                     }
                     let sub_item = sub_item.unwrap();
-                    if *sub_item == value {
+                    let items_are_number = matches!(value, DataType::Number(_))
+                        && matches!(*sub_item, DataType::Number(_));
+                    let matched = match op {
+                        FindOp::Eq => *sub_item == value,
+                        FindOp::NotEq => *sub_item != value,
+                        FindOp::Gt => items_are_number && sub_item.to_number() > value.to_number(),
+                        FindOp::Lt => items_are_number && sub_item.to_number() < value.to_number(),
+                    };
+                    if matched {
                         result.push(item.clone());
                     }
                 }
                 return Some(DataType::Array(result));
             }
-            // DataType::Document(d) => d.get_mut(index),
+
             _ => None,
         }
     }
