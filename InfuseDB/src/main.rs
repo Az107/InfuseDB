@@ -1,3 +1,4 @@
+mod arg_parser;
 mod command;
 mod help_const;
 mod infusedb;
@@ -7,12 +8,13 @@ mod server;
 #[cfg(feature = "server")]
 use server::Server;
 
+use arg_parser::{args_parser, ArgSearch};
 use command::Command;
 use infusedb::{utils, DataType, InfuseDB, VERSION};
 
+use std::io;
 use std::io::Write;
 use std::path::Path;
-use std::{env, io};
 
 const DEFAULT_PATH: &str = "default.mdb";
 const DEFAULT_COLLECTION_NAME: &str = "default";
@@ -40,18 +42,23 @@ fn format_data_type(data: DataType, sub: u32) -> String {
 
 fn main() {
     let mut db = InfuseDB::new();
-    if !Path::new(DEFAULT_PATH).exists() {
-        db.path = DEFAULT_PATH.to_string();
+    let args = args_parser();
+    let path = args.get_key("-p").unwrap_or(DEFAULT_PATH.to_string());
+    let collection_name = args
+        .get_key("-c")
+        .unwrap_or(DEFAULT_COLLECTION_NAME.to_string());
+
+    if !Path::new(&path).exists() {
+        db.path = path;
     } else {
-        db = InfuseDB::load(DEFAULT_PATH).unwrap();
+        db = InfuseDB::load(&path).unwrap();
     }
     println!("InfuseDB {}", VERSION);
-    if db.get_collection(DEFAULT_COLLECTION_NAME).is_none() {
-        let _ = db.create_collection(DEFAULT_COLLECTION_NAME);
+    if db.get_collection(&collection_name).is_none() {
+        let _ = db.create_collection(&collection_name);
     }
     let mut selected = String::new();
-    let args: Vec<String> = env::args().collect();
-    if args.len() <= 1 {
+    if args.count_simple() == 0 {
         loop {
             print!("{}> ", selected);
             let _ = io::stdout().flush();
@@ -131,19 +138,26 @@ fn main() {
         }
     } else {
         #[cfg(feature = "server")]
-        if args[1] == "-s" {
+        if args.get_key("-s").is_some() {
             let mut server = Server::new("0.0.0.0", 1234).expect("vaia");
             println!("Starting server on 1234");
             let _ = server.listen();
 
             return;
         }
-        let command = args.clone()[1..].to_vec().join(" ");
-        let collection = db.get_collection(DEFAULT_COLLECTION_NAME).unwrap();
+
+        let commands = args.get_single_joined();
+        let command = commands.last();
+        if command.is_none() {
+            return;
+        }
+        let command = command.unwrap();
+
         if command == "help" {
             println!("{}", help_const::HELP_STR_COL);
             return;
         }
+        let collection = db.get_collection(&collection_name).unwrap();
         let r = collection.run(&command);
         let output = match r {
             Ok(result) => format!("{}", format_data_type(result, 0)),
