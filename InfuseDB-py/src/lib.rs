@@ -100,7 +100,7 @@ fn convert_py_to_data_type(py: Python<'_>, value: &PyObject) -> PyResult<infused
     if let Ok(s) = value.extract::<String>(py) {
         return Ok(infusedb::DataType::Text(s));
     }
-    if let Ok(f) = value.extract::<i32>(py) {
+    if let Ok(f) = value.extract::<f32>(py) {
         return Ok(infusedb::DataType::Number(f));
     }
     if let Ok(b) = value.extract::<bool>(py) {

@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 pub type Document = HashMap<String, DataType>;
 
+
 #[macro_export]
 macro_rules! doc {
   ( $( $key: expr => $value: expr ),* ) => {
@@ -163,6 +164,7 @@ fn test_dump() {
     collection.add("name", DataType::from("Juan"));
     collection.add("surname", DataType::from("Perez"));
     collection.add("age", DataType::from(15));
+
     let dump = collection.dump();
     println!("{}", dump);
     assert!(dump.starts_with(header));
