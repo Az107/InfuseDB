@@ -1,91 +1,15 @@
-use crate::utils;
-
 // Writen by Alberto Ruiz 2024-03-08
 // The collection module will provide the collection of documents for the InfuseDB
 // The collection will store the documents in memory and provide a simple API to interact with them
 // The Document will be a HashMap<String, DataType>
 //
 use super::data_type::DataType;
-use serde_json::Value;
+use crate::utils;
 use std::collections::HashMap;
-use uuid::Uuid;
 
-const ID: &str = "ID";
-
-//create a trait based on HashMap<String,DataType>
-// and impl especial methods for it
 pub type Document = HashMap<String, DataType>;
 
-// impl Into<DataType> for Document {
-//     fn into(self) -> DataType {
-//         DataType::Document(self)
-//     }
-// }
 
-pub trait DocumentJson {
-    fn to_json(&self) -> String;
-    fn to_json_value(&self) -> Value;
-    fn from_json(json: &str) -> Result<Document, &str>;
-}
-
-impl DocumentJson for Document {
-    fn to_json(&self) -> String {
-        self.to_json_value().to_string()
-    }
-
-    fn to_json_value(&self) -> Value {
-        let mut json = serde_json::json!({});
-        for (key, value) in self.iter() {
-            match value {
-                DataType::Id(id) => json[key] = serde_json::json!(id.to_string()),
-                DataType::Text(text) => json[key] = serde_json::json!(text),
-                DataType::Number(number) => json[key] = serde_json::json!(number),
-                DataType::Boolean(boolean) => json[key] = serde_json::json!(boolean),
-                _ => json[key] = serde_json::json!("()"),
-            }
-        }
-        json
-    }
-
-    fn from_json(json: &str) -> Result<Self, &str> {
-        let v: Value = serde_json::from_str(json).unwrap();
-        let mut document = Document::new();
-        for (key, value) in v.as_object().unwrap() {
-            let value: Value = value.clone();
-            if key == ID {
-                let value_is_string = value.is_string();
-                let id = Uuid::parse_str(value.as_str().unwrap());
-                if id.is_ok() && value_is_string {
-                    document.insert(key.to_string(), DataType::Id(id.unwrap()));
-                } else {
-                    match value {
-                        Value::Number(n) => document.insert(
-                            "id".to_string(),
-                            DataType::Number(n.as_f64().unwrap() as f32),
-                        ),
-                        Value::String(s) => document.insert("id".to_string(), DataType::Text(s)),
-                        Value::Bool(b) => document.insert("id".to_string(), DataType::Boolean(b)),
-                        _ => document.insert("id".to_string(), DataType::Text("".to_string())),
-                    };
-                }
-            } else {
-                match value {
-                    Value::Number(n) => document.insert(
-                        key.to_string(),
-                        DataType::Number(n.as_f64().unwrap() as f32),
-                    ),
-                    Value::String(s) => document.insert(key.to_string(), DataType::Text(s)),
-                    Value::Bool(b) => document.insert(key.to_string(), DataType::Boolean(b)),
-                    _ => document.insert(key.to_string(), DataType::Text("".to_string())),
-                };
-            }
-        }
-
-        Ok(document)
-    }
-}
-
-//create a macro to create a document
 #[macro_export]
 macro_rules! doc {
   ( $( $key: expr => $value: expr ),* ) => {
@@ -93,7 +17,7 @@ macro_rules! doc {
          use std::collections::HashMap;
         let mut map = HashMap::new();
         $(
-            map.insert($key.to_string(), DataType::from($value)); // Update this line
+            map.insert($key.to_string(), DataType::from($value));
         )*
         DataType::Document(map)
     }
@@ -102,7 +26,7 @@ macro_rules! doc {
 
 pub struct Collection {
     pub name: String,
-    pub(crate) data: HashMap<String, DataType>,
+    pub(crate) data: DataType,
     //b_tree: BNode
 }
 
@@ -117,81 +41,31 @@ pub trait _KV {
     fn load(data: &str) -> Collection;
 }
 
-// impl DocumentJson for Collection {
-//     fn to_json_value(&self) -> Value {
-//         let mut json = serde_json::json!({
-//           "name": self.name,
-//           "data": []
-//         });
-//         let mut jsondata = Vec::new();
-//         for document in self.data.iter() {
-//             jsondata.push(document.to_json_value())
-//         }
-//         json["data"] = serde_json::Value::Array(jsondata);
-//         json
-//     }
-
-//     fn to_json(&self) -> String {
-//         self.to_json_value().to_string()
-//     }
-
-//     fn from_json(json: &str) -> Result<Self, &str> {
-//         let v: Value = serde_json::from_str(json).unwrap();
-//         let obj = v.as_object().unwrap();
-//         let name = obj.get("name");
-//         if name.is_none() {
-//             return Err("()");
-//         }
-//         let name = name.unwrap().to_string().replace("\"", "");
-//         let mut collection = Collection::new(name.as_str());
-//         let data = obj.get("data");
-//         if data.is_none() {
-//             return Err("()");
-//         }
-//         let data = data.unwrap().as_array();
-//         if data.is_none() {
-//             return Err("Error converting data as array");
-//         }
-//         let data = data.unwrap();
-//         for document in data {
-//             let document = document.to_string();
-//             let document = document.as_str();
-//             let doc = Document::from_json(document);
-//             if doc.is_err() {
-//                 continue;
-//             }
-//             let doc = doc.unwrap();
-//             collection.add(doc);
-//         }
-//         return Ok(collection);
-//     }
-// }
-
 // impl KV for Collection {
 impl Collection {
     pub fn new(name: &str) -> Self {
         Collection {
             name: name.to_string(),
-            data: HashMap::new(), //b_tree: BNode::new(),
+            data: DataType::Document(Document::new()),
+            //b_tree: BNode::new(),
         }
     }
 
     pub fn add(&mut self, key: &str, value: DataType) -> &mut Self {
-        self.data.insert(key.to_string(), value);
+        let _ = self.data.set(key, value);
         return self;
     }
 
     pub fn rm(&mut self, key: &str) {
-        //self.data.remove(index);
-        self.data.remove(key);
+        let _ = self.data.remove(key);
     }
 
     pub fn count(&self) -> usize {
-        self.data.len()
+        self.data.to_document().len()
     }
 
     pub fn list(&self) -> HashMap<String, DataType> {
-        return self.data.clone();
+        return self.data.to_document().clone();
     }
 
     pub fn get(&mut self, key: &str) -> Option<&DataType> {
@@ -201,7 +75,7 @@ impl Collection {
     pub fn dump(&self) -> String {
         let mut result = String::new();
         result.push_str(format!("[{}]\n", self.name).as_str());
-        for (k, v) in self.data.iter() {
+        for (k, v) in self.data.to_document().iter() {
             let t = match v.get_type() {
                 "id" => "1",
                 "text" => "2",
@@ -282,15 +156,17 @@ fn test_collection() {
 #[test]
 fn test_dump() {
     let header = "[prueba]\n";
-    let kv_name = "2 name Juan";
-    let kv_surname = "2 surname Perez";
-    let kv_age = "3 age 15.0";
+    let kv_name = "2 name \"Juan\"";
+    let kv_surname = "2 surname \"Perez\"";
+    let kv_age = "3 age 15";
 
     let mut collection = Collection::new("prueba");
-    collection.add("name", DataType::Text("Juan".to_string()));
-    collection.add("surname", DataType::Text("Perez".to_string()));
-    collection.add("age", DataType::Number(15.0)); //TODO: allow use 15 as float
+    collection.add("name", DataType::from("Juan"));
+    collection.add("surname", DataType::from("Perez"));
+    collection.add("age", DataType::from(15));
+
     let dump = collection.dump();
+    println!("{}", dump);
     assert!(dump.starts_with(header));
     assert!(dump.contains(kv_name));
     assert!(dump.contains(kv_surname));

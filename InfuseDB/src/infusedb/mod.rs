@@ -7,12 +7,12 @@ mod data_type;
 pub mod utils;
 pub use collection::Collection;
 pub use data_type::DataType;
+pub use data_type::FindOp; //TODO: change to own trait and file
 use std::fs;
 
 pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 pub struct InfuseDB {
-    pub version: &'static str,
     pub path: String,
     collections: Vec<Collection>,
 }
@@ -20,7 +20,6 @@ pub struct InfuseDB {
 impl InfuseDB {
     pub fn new() -> Self {
         InfuseDB {
-            version: VERSION,
             path: "./default.mdb".to_string(),
             collections: Vec::new(),
         }
@@ -57,7 +56,6 @@ impl InfuseDB {
         }
 
         Ok(InfuseDB {
-            version: VERSION,
             collections,
             path: path.to_string(),
         })

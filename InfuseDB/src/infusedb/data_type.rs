@@ -1,3 +1,5 @@
+use std::usize;
+
 // Written by Alberto Ruiz 2024-03-08
 // The data type module will provide the data types for the InfuseDB
 // this will be store several types of data, like text, numbers, dates, arrays and documents
@@ -5,6 +7,13 @@
 // The data type will be used to store the data in the documents
 use super::collection::Document;
 use uuid::Uuid;
+
+pub enum FindOp {
+    Eq,
+    NotEq,
+    Gt,
+    Lt,
+}
 
 #[derive(PartialEq, Debug)]
 pub enum DataType {
@@ -14,6 +23,19 @@ pub enum DataType {
     Boolean(bool),
     Array(Vec<DataType>),
     Document(Document),
+}
+
+#[macro_export]
+macro_rules! d {
+    // Para arrays/vecs, aplica el macro recursivamente a cada elemento
+    ([$( $elem:tt ),* $(,)?]) => {
+        $crate::DataType::Array(vec![$( $crate::DataType::from($elem) ),*])
+    };
+
+    // Para expresiones simples, asume que hay un From<T> para DataType
+    ($val:expr) => {
+        $crate::DataType::from($val)
+    };
 }
 
 impl DataType {
@@ -28,38 +50,93 @@ impl DataType {
         }
     }
 
-    pub fn get(&self, n: usize) -> DataType {
-        //WIP 🚧
-        if matches!(self, DataType::Array(_)) {
-            return self.to_array().get(n).unwrap().clone();
-        } else {
-            return self.clone();
+    pub fn get(&self, index: &str) -> Option<&DataType> {
+        match self {
+            DataType::Array(v) => {
+                let n = index.parse::<usize>().ok()?;
+                v.get(n)
+            }
+            DataType::Document(d) => d.get(index),
+            _ => None,
         }
     }
 
-    pub fn concat(&self, b: DataType) -> Option<Self> {
-        if !matches!(self, DataType::Array(_)) && b.get_type() != self.get_type() {
-            return None;
-        }
-        let result;
+    pub fn get_mut(&mut self, index: &str) -> Option<&mut DataType> {
         match self {
-            DataType::Text(text) => {
-                let mut new_text = text.clone();
-                new_text.push_str(b.to_text());
-                result = DataType::Text(new_text.clone());
+            DataType::Array(v) => {
+                let n = index.parse::<usize>().ok()?;
+                v.get_mut(n)
             }
-            DataType::Number(num) => {
-                let new_num = num + b.to_number();
-                result = DataType::Number(new_num)
+            DataType::Document(d) => d.get_mut(index),
+            _ => None,
+        }
+    }
+
+    pub fn find(&self, sub_key: &str, op: FindOp, value: DataType) -> Option<DataType> {
+        let mut result: Vec<DataType> = Vec::new();
+        match self {
+            DataType::Array(v) => {
+                for item in v {
+                    let sub_item = item.get(sub_key);
+                    if sub_item.is_none() {
+                        continue;
+                    }
+                    let sub_item = sub_item.unwrap();
+                    let items_are_number = matches!(value, DataType::Number(_))
+                        && matches!(*sub_item, DataType::Number(_));
+                    let matched = match op {
+                        FindOp::Eq => *sub_item == value,
+                        FindOp::NotEq => *sub_item != value,
+                        FindOp::Gt => items_are_number && sub_item.to_number() > value.to_number(),
+                        FindOp::Lt => items_are_number && sub_item.to_number() < value.to_number(),
+                    };
+                    if matched {
+                        result.push(item.clone());
+                    }
+                }
+                return Some(DataType::Array(result));
             }
-            DataType::Array(list) => {
-                let mut new_list = list.clone();
-                new_list.push(b);
-                result = DataType::Array(new_list);
+
+            _ => None,
+        }
+    }
+
+    pub fn set(&mut self, index: &str, dt: DataType) -> Result<DataType, &'static str> {
+        match self {
+            DataType::Array(vec) => {
+                if let Ok(index) = index.parse::<usize>() {
+                    while index >= vec.len() {
+                        vec.push(DataType::Text("".to_string()));
+                    }
+                    vec[index] = dt;
+                    Ok(self.clone())
+                } else {
+                    Err("Invalid index")
+                }
             }
-            _ => return None,
-        };
-        return Some(result);
+            DataType::Document(doc) => {
+                doc.insert(index.to_string(), dt);
+                Ok(self.clone())
+            }
+            _ => Err("Not supported"),
+        }
+    }
+    pub fn remove(&mut self, index: &str) -> Result<DataType, &'static str> {
+        match self {
+            DataType::Array(vec) => {
+                if let Ok(index) = index.parse::<usize>() {
+                    vec.remove(index);
+                    Ok(self.clone())
+                } else {
+                    Err("Invalid index")
+                }
+            }
+            DataType::Document(doc) => {
+                doc.remove(index);
+                Ok(self.clone())
+            }
+            _ => Err("Not supported"),
+        }
     }
 
     //add into
@@ -110,6 +187,8 @@ impl DataType {
             4
         } else if raw.starts_with('[') && raw.ends_with(']') {
             5
+        } else if raw.starts_with('{') && raw.ends_with('}') {
+            6
         } else {
             2
         }
@@ -142,9 +221,12 @@ impl DataType {
                 let mut new_vec = Vec::new();
                 let raw = raw.strip_suffix(']').unwrap().strip_prefix('[').unwrap();
                 let mut open_array = false;
+                let mut open_string = false;
+                let mut open_bracket = 0;
+
                 let mut sub_raw = String::new();
                 for chr in raw.chars() {
-                    if chr == ',' && !open_array {
+                    if chr == ',' && !open_array && !open_string && open_bracket == 0 {
                         let t = Self::infer_type(&sub_raw);
                         let r = Self::load(t, sub_raw.clone());
                         if r.is_some() {
@@ -159,6 +241,15 @@ impl DataType {
                     if chr == ']' && open_array {
                         open_array = false;
                     }
+                    if chr == '{' {
+                        open_bracket += 1;
+                    }
+                    if chr == '}' {
+                        open_bracket -= 1;
+                    }
+                    if chr == '"' {
+                        open_string = !open_string
+                    }
                     sub_raw.push(chr);
                 }
                 if !sub_raw.is_empty() {
@@ -170,6 +261,63 @@ impl DataType {
                 }
 
                 Some(DataType::Array(new_vec))
+            }
+            6 => {
+                let mut d = Document::new();
+                let raw = raw.strip_suffix('}').unwrap().strip_prefix('{').unwrap();
+                let mut key = String::new();
+                let mut key_done = false;
+                let mut open_array = 0;
+                let mut open_string = false;
+                let mut open_bracket = 0;
+                let mut value = String::new();
+                for chr in raw.chars() {
+                    if chr == ':' && !key_done {
+                        key_done = true;
+                        continue;
+                    }
+                    if key_done {
+                        if chr == ',' && open_array == 0 && !open_string && open_bracket == 0 {
+                            let t = Self::infer_type(&value);
+                            let r = Self::load(t, value.clone());
+                            if r.is_some() {
+                                d.insert(key.trim().to_string(), r.unwrap());
+                                key = String::new();
+                                value = String::new();
+                                key_done = false;
+                                continue;
+                            }
+                        }
+
+                        if chr == '[' {
+                            open_array += 1;
+                        }
+                        if chr == ']' {
+                            open_array -= 1;
+                        }
+                        if chr == '{' {
+                            open_bracket += 1;
+                        }
+                        if chr == '}' {
+                            open_bracket -= 1
+                        }
+                        if chr == '"' {
+                            open_string = !open_string
+                        }
+
+                        value.push(chr);
+                    } else {
+                        key.push(chr);
+                    }
+                }
+                if !key.is_empty() && !value.is_empty() {
+                    let t = Self::infer_type(&value);
+                    let r = Self::load(t, value.clone());
+                    if r.is_some() {
+                        d.insert(key.trim().to_string(), r.unwrap());
+                    }
+                }
+                Some(DataType::Document(d))
             }
             _ => None,
         }
@@ -190,18 +338,23 @@ impl ToString for DataType {
                     result.push_str(&value.to_string());
                     result.push_str(", ");
                 }
-                let mut result = result.strip_suffix(", ").unwrap().to_string();
+                let mut result = result.strip_suffix(", ").unwrap_or(&result).to_string();
                 result.push(']');
                 result
             }
             DataType::Document(document) => {
                 let mut result = String::new();
+                result.push('{');
                 for (key, value) in document {
                     result.push_str(&key);
                     result.push_str(": ");
                     result.push_str(&value.to_string());
                     result.push_str(", ");
                 }
+                result.pop();
+                result.pop();
+                result.push('}');
+
                 result
             }
         }
@@ -267,5 +420,23 @@ impl Clone for DataType {
             DataType::Array(array) => DataType::Array(array.clone()),
             DataType::Document(document) => DataType::Document(document.clone()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DataType;
+
+    #[test]
+    fn test_macro() {
+        let dd = d!("Hello");
+        let expected = DataType::from("Hello");
+        assert!(dd == expected);
+        let dd = d!(10);
+        let expected = DataType::from(10);
+        assert!(dd == expected);
+        let dd = d!(["hello", 10]);
+        let expected = DataType::from(vec![d!("hello"), d!(10)]);
+        assert!(dd == expected);
     }
 }

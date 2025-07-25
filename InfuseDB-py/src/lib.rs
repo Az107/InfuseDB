@@ -38,7 +38,7 @@ impl InfuseDBpy {
     }
 
     fn get_version(&self) -> &str {
-        self.inner.lock().unwrap().version
+        infusedb::VERSION
     }
 
     fn create_collection(&mut self, name: &str) -> PyResult<()> {
@@ -115,15 +115,16 @@ fn convert_py_to_data_type(py: Python<'_>, value: &PyObject) -> PyResult<infused
         }
         return Ok(infusedb::DataType::Array(items));
     }
-    // if let Ok(dict) = value.downcast::<PyDict>() {
-    //     let mut map = std::collections::HashMap::new();
-    //     for (key, val) in dict.iter() {
-    //         let key: String = key.extract()?;
-    //         let val = convert_py_to_data_type(val)?;
-    //         map.insert(key, val);
-    //     }
-    //     return Ok(memodb::DataType::Document(map));
-    // }
+    if let Ok(dict) = value.extract::<Py<PyDict>>(py) {
+        let mut map = std::collections::HashMap::new();
+        let dict = dict.bind_borrowed(py);
+        for (key, val) in dict.iter() {
+            let key: String = key.extract()?;
+            let val = convert_py_to_data_type(py, &val.into_py_any(py)?)?;
+            map.insert(key, val);
+        }
+        return Ok(infusedb::DataType::Document(map));
+    }
 
     Err(PyValueError::new_err("Unsupported data type"))
 }
@@ -156,6 +157,31 @@ impl Collection {
         let v = convert_py_to_data_type(py, &v)?;
         c.add(k, v);
         return Ok(());
+    }
+
+    fn del(&mut self, _py: Python<'_>, key: &str) -> PyResult<()> {
+        let mut db = self.inner.lock().unwrap();
+        let c = db.get_collection(self.name.as_str());
+        if c.is_none() {
+            return Err(PyValueError::new_err("error getting collection"));
+        }
+        let c = c.unwrap();
+        c.rm(key);
+        Ok(())
+    }
+
+    fn list(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
+        let list = PyList::empty(py);
+        let mut db = self.inner.lock().unwrap();
+        let c = db.get_collection(self.name.as_str());
+        if c.is_none() {
+            return Err(PyValueError::new_err("error getting collection"));
+        }
+        let c = c.unwrap();
+        for (k, _) in c.list() {
+            list.add(k)?;
+        }
+        return Ok(list.unbind());
     }
 }
 
