@@ -1,7 +1,7 @@
-use crate::command::Command;
-use crate::infusedb::DataType;
 use crate::InfuseDB;
 use crate::VERSION;
+use crate::infusedb::DataType;
+use crate::repl::command::Command;
 
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};

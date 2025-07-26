@@ -1,19 +1,19 @@
 mod arg_parser;
-mod command;
-mod help_const;
 mod infusedb;
+mod repl;
 #[cfg(feature = "server")]
 mod server;
 
+use arg_parser::{ArgSearch, args_parser};
+use repl::command::Command;
+use repl::commander;
+use repl::commander::Commander;
+use repl::help_const;
 #[cfg(feature = "server")]
 use server::Server;
 
-use arg_parser::{args_parser, ArgSearch};
-use command::Command;
-use infusedb::{utils, DataType, InfuseDB, VERSION};
+use infusedb::{DataType, InfuseDB, VERSION, utils};
 
-use std::io;
-use std::io::Write;
 use std::path::Path;
 
 const DEFAULT_PATH: &str = "~/.infusedb/default.mdb";
@@ -57,88 +57,10 @@ fn main() {
     if db.get_collection(&collection_name).is_none() {
         let _ = db.create_collection(&collection_name);
     }
-    let mut selected = String::new();
+
     if args.count_simple() == 0 {
-        loop {
-            print!("{}> ", selected);
-            let _ = io::stdout().flush();
-            let mut buffer = String::new();
-            let _ = io::stdin().read_line(&mut buffer);
-            let command: Vec<String> = utils::smart_split(buffer.clone());
-            let action = command.get(0);
-            if action.is_none() {
-                continue;
-            }
-            let action = action.unwrap();
-            let args = if command.len() > 0 {
-                command.clone()[1..].to_vec()
-            } else {
-                Vec::new()
-            };
-
-            if action == "exit" {
-                break;
-            } else if action == "select" {
-                if args.len() >= 1 && db.get_collection_list().contains(&args[0]) {
-                    selected = args[0].clone()
-                } else {
-                    println!("Collection don't exists");
-                }
-                continue;
-            } else if action == "deselect" && !selected.is_empty() {
-                selected = String::new();
-                continue;
-            } else if selected.is_empty() && action == "list" {
-                for c in db.get_collection_list() {
-                    println!("-> {}", c);
-                }
-                continue;
-            } else if action == "del_col" {
-                if selected.is_empty() {
-                    if args.len() != 0 {
-                        selected = args[0].clone();
-                    } else {
-                        println!("No collection selected");
-                        continue;
-                    }
-                }
-                db.remove_collection(selected);
-                selected = String::new();
-            } else if action == "new" {
-                if args.len() != 0 {
-                    let _ = db.create_collection(&args[0]);
-                } else {
-                    println!("No collection name provided");
-                }
-                continue;
-            } else if action == "commit" {
-                let r = db.dump();
-                if r.is_err() {
-                } else {
-                    println!("Changed saved");
-                }
-                continue;
-            } else if action == "help" {
-                if selected.is_empty() {
-                    println!("{}", help_const::HELP_STR_MAIN);
-                } else {
-                    println!("{}", help_const::HELP_STR_COL);
-                }
-                continue;
-            }
-
-            if selected == "" {
-                println!("No collection selected");
-                continue;
-            }
-            let collection = db.get_collection(selected.as_str()).unwrap();
-            let r = collection.run(&buffer);
-            let output = match r {
-                Ok(result) => format!("{}", format_data_type(result, 0)),
-                Err(err) => format!("{:?}", err.to_string()),
-            };
-            println!("{}", output);
-        }
+        let mut commander = Commander::new(db);
+        commander.repl_loop();
     } else {
         #[cfg(feature = "server")]
         if args.get_key("-s").is_some() {
@@ -167,7 +89,6 @@ fn main() {
             Err(err) => format!("{:?}", err.to_string()),
         };
         println!("{}", output);
+        let _ = db.dump();
     }
-
-    let _ = db.dump();
 }

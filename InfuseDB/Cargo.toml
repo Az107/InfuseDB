@@ -21,6 +21,7 @@ path = "src/main.rs"
 
 [dependencies]
 mio = { version = "1.0.4", features = ["net", "os-poll"], optional = true }
+rustyline = "16.0.0"
 
 
 [dependencies.uuid]
