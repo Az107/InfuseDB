@@ -1,9 +1,11 @@
 [package]
-
-
 name = "InfuseDB"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
+authors = ["Alb Ruiz G. <me@albruiz.dev>"]
+description = "InfuseDB is a Document oriented KV database"
+license = "MIT"
+readme = "../README.md"
 
 [features]
 server = ["dep:mio"]
