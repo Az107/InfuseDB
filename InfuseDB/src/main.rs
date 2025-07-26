@@ -16,7 +16,7 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
-const DEFAULT_PATH: &str = "default.mdb";
+const DEFAULT_PATH: &str = "~/.infusedb/default.mdb";
 const DEFAULT_COLLECTION_NAME: &str = "default";
 
 fn format_data_type(data: DataType, sub: u32) -> String {
@@ -84,6 +84,9 @@ fn main() {
                 } else {
                     println!("Collection don't exists");
                 }
+                continue;
+            } else if action == "deselect" && !selected.is_empty() {
+                selected = String::new();
                 continue;
             } else if selected.is_empty() && action == "list" {
                 for c in db.get_collection_list() {
