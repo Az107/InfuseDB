@@ -1,7 +1,7 @@
-use crate::command::Command;
-use crate::infusedb::DataType;
 use crate::InfuseDB;
 use crate::VERSION;
+use crate::command::Command;
+use crate::infusedb::DataType;
 
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};
@@ -41,7 +41,21 @@ enum ProcessError {
     Other(&'static str),
 }
 
-fn process_cmd(cmd: &str, ctx: &mut Context, db: &InfuseDB) -> Result<DataType, ProcessError> {
+fn process_cmd(cmd: &str, ctx: &mut Context, db: &mut InfuseDB) -> Result<DataType, ProcessError> {
+    if let Some(collection) = ctx.collection.clone() {
+        return db
+            .get_collection(&collection)
+            .unwrap()
+            .run(cmd)
+            .map_err(|err| match err {
+                crate::command::CommandError::EmptyCommand => ProcessError::InvalidCommand,
+                crate::command::CommandError::NoEnoughArgs => ProcessError::InvalidCommand,
+                crate::command::CommandError::UnknownCommand => ProcessError::NotFound,
+                crate::command::CommandError::ErrorParsing => ProcessError::InvalidCommand,
+                crate::command::CommandError::KeyNotFound(_, _) => ProcessError::NotFound,
+                crate::command::CommandError::Custom(err) => ProcessError::Other(err),
+            });
+    }
     let args: Vec<&str> = cmd.split_whitespace().collect();
     match *args.first().ok_or(ProcessError::InvalidCommand)? {
         "echo" => {
@@ -80,8 +94,7 @@ fn process_cmd(cmd: &str, ctx: &mut Context, db: &InfuseDB) -> Result<DataType, 
 const SERVER: Token = Token(0);
 
 impl Server {
-    pub fn new(host: &str, port: usize) -> Result<Self, &'static str> {
-        let db = InfuseDB::load("default.mdb").unwrap();
+    pub fn new(host: &str, port: usize, db: InfuseDB) -> Result<Self, &'static str> {
         let server = Server {
             addr: format!("{}:{}", host, port)
                 .parse()
@@ -110,7 +123,7 @@ impl Server {
                         let token = Token(unique_token);
                         unique_token += 1;
                         let header = format!("InfuseDB {}\r\n", VERSION);
-                        stream.write_all(header.as_bytes()).unwrap(); // Respuesta simple
+                        stream.write_all(header.as_bytes()).unwrap();
                         poll.registry()
                             .register(&mut stream, token, Interest::READABLE)?;
                         connections.insert(
@@ -136,7 +149,7 @@ impl Server {
                                 let data = &buf[..n];
                                 let cmd = str::from_utf8(&data).unwrap();
                                 let cmd_result: Result<DataType, ProcessError> =
-                                    process_cmd(cmd, ctx, &self.db);
+                                    process_cmd(cmd, ctx, &mut self.db);
                                 let result: Result<DataType, String> = match cmd_result {
                                     Ok(result) => Ok(result),
                                     Err(err) => match err {

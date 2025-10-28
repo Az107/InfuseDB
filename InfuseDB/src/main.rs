@@ -12,6 +12,7 @@ use arg_parser::{ArgSearch, args_parser};
 use command::Command;
 use infusedb::{DataType, InfuseDB, VERSION, utils};
 
+use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::{env, io};
@@ -52,7 +53,7 @@ fn main() {
         .unwrap_or(DEFAULT_COLLECTION_NAME.to_string());
 
     if !Path::new(&path).exists() {
-        db.path = path;
+        db.path = path.to_string();
     } else {
         db = InfuseDB::load(&path).unwrap();
     }
@@ -146,7 +147,7 @@ fn main() {
     } else {
         #[cfg(feature = "server")]
         if args.get_key("-s").is_some() {
-            let mut server = Server::new("0.0.0.0", 1234).expect("vaia");
+            let mut server = Server::new("0.0.0.0", 1234, db).expect("vaia");
             println!("Starting server on 1234");
             let _ = server.listen();
 
