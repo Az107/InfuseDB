@@ -87,6 +87,7 @@ impl ArgSearch for BetterArg {
             match item {
                 Arg::Simple(a) => {
                     arg.push_str(&a);
+                    arg.push_str(" ");
                 }
                 Arg::Couple(_, _) => {
                     if !arg.is_empty() {

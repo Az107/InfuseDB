@@ -186,7 +186,7 @@ impl Collection {
 }
 
 #[pymodule]
-fn infusedb_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn pyinfusedb(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<InfuseDBpy>()?;
     Ok(())
 }

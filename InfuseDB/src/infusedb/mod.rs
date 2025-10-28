@@ -9,6 +9,7 @@ pub use collection::Collection;
 pub use data_type::DataType;
 pub use data_type::FindOp; //TODO: change to own trait and file
 use std::fs;
+use std::path::Path;
 
 pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -68,8 +69,19 @@ impl InfuseDB {
             result.push_str(page.as_str());
             result.push_str("\n");
         }
+        let path = Path::new(&self.path);
+        if !path.exists() {
+            if let Err(e) = fs::File::create(&self.path) {
+                println!("{} {:?}", self.path, e);
+                return Err("Error creating file");
+            }
+        }
 
-        let _ = fs::write(self.path.as_str(), result);
+        let r = fs::write(path, result);
+        if r.is_err() {
+            println!("{:?}", r.err().unwrap());
+            return Err("Error saving file");
+        }
         Ok(())
     }
 

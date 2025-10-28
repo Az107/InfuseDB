@@ -8,13 +8,13 @@ mod server;
 #[cfg(feature = "server")]
 use server::Server;
 
-use arg_parser::{args_parser, ArgSearch};
+use arg_parser::{ArgSearch, args_parser};
 use command::Command;
-use infusedb::{utils, DataType, InfuseDB, VERSION};
+use infusedb::{DataType, InfuseDB, VERSION, utils};
 
-use std::io;
 use std::io::Write;
 use std::path::Path;
+use std::{env, io};
 
 const DEFAULT_PATH: &str = "~/.infusedb/default.mdb";
 const DEFAULT_COLLECTION_NAME: &str = "default";
@@ -44,6 +44,9 @@ fn main() {
     let mut db = InfuseDB::new();
     let args = args_parser();
     let path = args.get_key("-p").unwrap_or(DEFAULT_PATH.to_string());
+    let home = env::home_dir().unwrap();
+    let home = home.to_str().unwrap();
+    let path = path.replace("~", home);
     let collection_name = args
         .get_key("-c")
         .unwrap_or(DEFAULT_COLLECTION_NAME.to_string());
@@ -114,6 +117,7 @@ fn main() {
             } else if action == "commit" {
                 let r = db.dump();
                 if r.is_err() {
+                    println!("Error saving changes: {}", r.err().unwrap());
                 } else {
                     println!("Changed saved");
                 }
@@ -164,7 +168,7 @@ fn main() {
         let r = collection.run(&command);
         let output = match r {
             Ok(result) => format!("{}", format_data_type(result, 0)),
-            Err(err) => format!("{:?}", err.to_string()),
+            Err(err) => format!("{}", err.to_string()),
         };
         println!("{}", output);
     }

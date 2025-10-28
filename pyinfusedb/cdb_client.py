@@ -20,8 +20,8 @@ class Caddydb_client:
         return buffer.decode().rstrip("\n")
 
     def cmd(self, command: list[str] ):
-        command = " ".join(command)
-        self.__send__(command)
+        command_full = " ".join(command)
+        self.__send__(command_full)
         self.__send__("\n")
         return self.__recv__()
 
@@ -41,6 +41,3 @@ class Caddydb_client:
 if __name__ == "__main__":
     cdbc = Caddydb_client("localhost", 1234)
     print(cdbc.list())
-
-
-
