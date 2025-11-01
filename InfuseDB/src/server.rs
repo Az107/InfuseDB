@@ -42,6 +42,8 @@ enum ProcessError {
 }
 
 fn process_cmd(cmd: &str, ctx: &mut Context, db: &mut InfuseDB) -> Result<DataType, ProcessError> {
+    let args: Vec<&str> = cmd.split_whitespace().collect();
+
     if let Some(collection) = ctx.collection.clone() {
         return db
             .get_collection(&collection)
@@ -56,7 +58,7 @@ fn process_cmd(cmd: &str, ctx: &mut Context, db: &mut InfuseDB) -> Result<DataTy
                 crate::command::CommandError::Custom(err) => ProcessError::Other(err),
             });
     }
-    let args: Vec<&str> = cmd.split_whitespace().collect();
+
     match *args.first().ok_or(ProcessError::InvalidCommand)? {
         "echo" => {
             let args2 = args.iter().skip(1).map(|s| *s).collect::<Vec<_>>();
@@ -173,7 +175,7 @@ impl Server {
 
                                 let result = if result.is_ok() {
                                     let r = result.unwrap();
-                                    r.to_string()
+                                    format!("ok: {}", r.to_string())
                                 } else {
                                     format!("err: {}", result.err().unwrap().to_string())
                                 };
