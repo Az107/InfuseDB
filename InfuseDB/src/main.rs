@@ -12,7 +12,6 @@ use arg_parser::{ArgSearch, args_parser};
 use command::Command;
 use infusedb::{DataType, InfuseDB, VERSION, utils};
 
-use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::{env, io};

@@ -100,34 +100,9 @@ impl Command for Collection {
 
                     for arg_i in 1..keys.len() {
                         let i = keys.get(arg_i).unwrap().to_string();
-                        value_pointer = match &value_pointer {
-                            DataType::Array(v) => {
-                                let i = i.parse::<usize>();
-                                if i.is_err() {
-                                    break;
-                                }
-                                let i = i.unwrap();
-                                let result = v.get(i);
-                                if result.is_none() {
-                                    return Err(CommandError::KeyNotFound(
-                                        keys[arg_i].to_string(),
-                                        keys[arg_i - 1].to_string(),
-                                    ));
-                                }
-                                result.unwrap()
-                            }
-                            DataType::Document(d) => {
-                                let result = d.get(&i);
-                                if result.is_none() {
-                                    return Err(CommandError::KeyNotFound(
-                                        keys[arg_i].to_string(),
-                                        keys[arg_i - 1].to_string(),
-                                    ));
-                                }
-                                result.unwrap()
-                            }
-                            _ => break,
-                        };
+                        value_pointer = value_pointer
+                            .get(&i)
+                            .ok_or(CommandError::KeyNotFound(i.clone(), name.clone()))?;
                         name.push_str(&format!("[{}]", i));
                     }
 

@@ -175,7 +175,7 @@ impl Server {
 
                                 let result = if result.is_ok() {
                                     let r = result.unwrap();
-                                    format!("ok: {}", r.to_string())
+                                    format!("ok: {}", r.to_json())
                                 } else {
                                     format!("err: {}", result.err().unwrap().to_string())
                                 };

@@ -104,15 +104,16 @@ impl DataType {
     pub fn set(&mut self, index: &str, dt: DataType) -> Result<DataType, &'static str> {
         match self {
             DataType::Array(vec) => {
-                if let Ok(index) = index.parse::<usize>() {
-                    while index >= vec.len() {
-                        vec.push(DataType::Text("".to_string()));
-                    }
-                    vec[index] = dt;
-                    Ok(self.clone())
-                } else {
-                    Err("Invalid index")
+                let index = match index {
+                    "+" => vec.len(),
+                    _ => index.parse::<usize>().map_err(|_| "Invalid index")?,
+                };
+
+                while index >= vec.len() {
+                    vec.push(DataType::Text("".to_string()));
                 }
+                vec[index] = dt;
+                Ok(self.clone())
             }
             DataType::Document(doc) => {
                 doc.insert(index.to_string(), dt);
@@ -121,6 +122,7 @@ impl DataType {
             _ => Err("Not supported"),
         }
     }
+
     pub fn remove(&mut self, index: &str) -> Result<DataType, &'static str> {
         match self {
             DataType::Array(vec) => {
@@ -320,6 +322,41 @@ impl DataType {
                 Some(DataType::Document(d))
             }
             _ => None,
+        }
+    }
+
+    pub fn to_json(&self) -> String {
+        match self {
+            DataType::Id(id) => id.to_string(),
+            DataType::Text(text) => format!("\"{}\"", text.to_string()),
+            DataType::Number(number) => number.to_string(),
+            DataType::Boolean(boolean) => boolean.to_string(),
+            DataType::Array(array) => {
+                let mut result = String::new();
+                result.push('[');
+                for value in array {
+                    result.push_str(&value.to_json());
+                    result.push_str(", ");
+                }
+                let mut result = result.strip_suffix(", ").unwrap_or(&result).to_string();
+                result.push(']');
+                result
+            }
+            DataType::Document(document) => {
+                let mut result = String::new();
+                result.push('{');
+                for (key, value) in document {
+                    result.push_str(&format!("\"{}\"", &key));
+                    result.push_str(": ");
+                    result.push_str(&value.to_json());
+                    result.push_str(", ");
+                }
+                result.pop();
+                result.pop();
+                result.push('}');
+
+                result
+            }
         }
     }
 }
