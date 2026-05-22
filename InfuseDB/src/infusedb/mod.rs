@@ -4,6 +4,7 @@
 
 mod collection;
 mod data_type;
+mod file_engine;
 pub mod utils;
 pub use collection::Collection;
 pub use data_type::DataType;
