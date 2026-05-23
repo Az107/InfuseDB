@@ -1,6 +1,7 @@
 use std::{
     fs::File,
-    io::{Cursor, Error, Read, Seek, SeekFrom},
+    io::{Cursor, Error, Read, Seek, SeekFrom, Write},
+    os::unix::fs::FileExt,
 };
 
 const MASTER_HEADER_SIZE: usize = 22;
@@ -71,8 +72,16 @@ impl Paginator {
             data_len: cur.read_u16_le()?,
             payload: Vec::new(),
         };
-        let _ = cur.read_to_end(&mut page.payload);
+        let _c = cur.read_to_end(&mut page.payload)?;
+
         Ok(page)
+    }
+
+    pub fn write_page(&mut self, num: u32, page: Page) -> Result<(), Error> {
+        self._fd
+            .seek(SeekFrom::Start((self.page_size * num) as u64))?;
+        page.write_to(&mut self._fd)?;
+        Ok(())
     }
 
     fn read_chunk(fd: &mut File, offset: u64, count: usize) -> Result<Vec<u8>, Error> {
@@ -100,6 +109,15 @@ impl PageType {
             _ => PageType::free,
         }
     }
+
+    fn to_u8(&self) -> u8 {
+        match self {
+            PageType::index => 1,
+            PageType::data => 2,
+            PageType::overflow => 3,
+            PageType::free => 4,
+        }
+    }
 }
 
 pub struct Page {
@@ -107,4 +125,29 @@ pub struct Page {
     next_page: u32,
     data_len: u16,
     payload: Vec<u8>,
+}
+
+impl Page {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+
+        buf.push(self.page_type.to_u8());
+
+        buf.extend_from_slice(&self.next_page.to_le_bytes());
+        buf.extend_from_slice(&self.data_len.to_le_bytes());
+
+        // payload directo
+        buf.extend_from_slice(&self.payload);
+
+        buf
+    }
+
+    // zero-copy solution to write pages to the file
+    pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), Error> {
+        w.write_all(&[self.page_type.to_u8()])?;
+        w.write_all(&self.next_page.to_le_bytes())?;
+        w.write_all(&self.data_len.to_le_bytes())?;
+        w.write_all(&self.payload)?;
+        Ok(())
+    }
 }
