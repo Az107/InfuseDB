@@ -2,9 +2,9 @@
 // InfuseDB is a in-memory database,
 // it will store the data in memory and provide a simple API to interact with it
 
+mod FileEngine;
 mod collection;
 mod data_type;
-mod file_engine;
 pub mod utils;
 pub use collection::Collection;
 pub use data_type::DataType;
