@@ -57,8 +57,6 @@ pub struct Paginator {
     total_pages: u32,
     free_list: u32,
     col_index: u32,
-
-    cache: HashMap<u32, Page>,
 }
 
 impl Paginator {
@@ -71,9 +69,8 @@ impl Paginator {
             version: VERSION,
             page_size,
             total_pages: 0,
-            free_list: 1,
+            free_list: 0xffffffff,
             col_index: 0xffffffff,
-            cache: HashMap::new(),
         };
         paginator.write_header()?;
         Ok(paginator)
@@ -102,6 +99,28 @@ impl Paginator {
         Ok(())
     }
 
+    fn page_offset(&self, page_id: u32) -> u64 {
+        (page_id * self.page_size) as u64
+    }
+
+    fn alloc_page_id(&mut self) -> Result<u32, Error> {
+        if self.free_list == 0xFFFFFFFF {
+            // No free pages, append one at the end
+            self.total_pages += 1;
+            Ok(self.total_pages)
+        } else {
+            let id = self.free_list;
+            // +1 to omit the page_type byte
+            let offset = self.page_offset(id) + 1;
+            let bytes: [u8; 4] = Paginator::read_chunk(&mut self.file, offset, 4)?
+                .as_slice()
+                .try_into()
+                .unwrap();
+            self.free_list = u32::from_le_bytes(bytes);
+            Ok(id)
+        }
+    }
+
     pub fn open(path: &str) -> Result<Self, Error> {
         let mut file = File::open(path)?; // TODO: improve error handling
         let header_bytes = Paginator::read_chunk(&mut file, 0, MASTER_HEADER_SIZE)?;
@@ -115,18 +134,14 @@ impl Paginator {
             total_pages: cur.read_u32_le()?,
             free_list: cur.read_u32_le()?,
             col_index: cur.read_u32_le()?,
-            cache: HashMap::new(),
         };
 
         Ok(dbfile)
     }
 
     pub fn get_page(&mut self, num: u32) -> Result<Page, Error> {
-        let raw_data = Paginator::read_chunk(
-            &mut self.file,
-            (self.page_size * num) as u64,
-            self.page_size as usize,
-        )?;
+        let page_id = self.page_offset(num);
+        let raw_data = Paginator::read_chunk(&mut self.file, page_id, self.page_size as usize)?;
         let mut cur = Cursor::new(&raw_data);
         let mut page = Page {
             page_type: PageType::from_u8(cur.read_u8()?),
@@ -142,7 +157,7 @@ impl Paginator {
         Ok(page)
     }
 
-    pub fn create_page(&mut self, page_type: PageType, data: &[u8]) -> Result<&Page, Error> {
+    pub fn create_page(&mut self, page_type: PageType, data: &[u8]) -> Result<Page, Error> {
         let page = Page {
             page_type,
             next_page: 0,
@@ -150,13 +165,10 @@ impl Paginator {
             payload: data.to_vec(),
             page_size: self.page_size,
         };
-        self.total_pages += 1;
-        let id = self.free_list;
-        self.free_list = self.total_pages + 1;
+        let id = self.alloc_page_id()?;
         let _ = self.write_page(id, &page);
-        let _ = self.cache.insert(id, page);
         self.write_header()?;
-        Ok(self.cache.get(&id).unwrap())
+        Ok(page)
     }
 
     pub fn write_page(&mut self, num: u32, page: &Page) -> Result<(), Error> {
