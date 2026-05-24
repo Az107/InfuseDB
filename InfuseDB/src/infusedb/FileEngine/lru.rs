@@ -37,8 +37,16 @@ impl<T> LRU<T> {
         }
     }
 
-    pub fn get(&mut self, id: u32) -> Option<T> {
-        None
+    pub fn get(&mut self, id: u32) -> Option<&T> {
+        let ptr = self.map.get(&id)?.clone();
+        self.move_to_head(ptr);
+        unsafe {
+            if !ptr.is_null() {
+                Some(&(*ptr).data)
+            } else {
+                None
+            }
+        }
     }
 
     fn evict(&mut self) {
@@ -52,15 +60,22 @@ impl<T> LRU<T> {
             }
 
             if !(*node).prev.is_null() {
-                (*(*node).prev).next = (*node).next;
+                (*(*node).prev).next = (*node).next
             }
 
             if !(*node).next.is_null() {
                 (*(*node).next).prev = (*node).prev;
             } else {
-                self.tail = (*node).prev;
+                // Node is Tail
+                self.tail = if self.tail.is_null() {
+                    node
+                } else if !(*node).prev.is_null() {
+                    (*node).prev
+                } else {
+                    self.tail
+                }
             }
-            
+
             (*node).prev = null_mut();
             (*node).next = self.head;
             if !self.head.is_null() {
@@ -75,9 +90,61 @@ impl<T> LRU<T> {
             self.evict();
         }
         let node = Node::new(key, data);
-        let mut ptr = Box::into_raw(Box::new(node));
+        let ptr = Box::into_raw(Box::new(node));
         self.move_to_head(ptr);
         self.map.insert(key, ptr);
+        self.count += 1;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_empty_cache() {
+        let mut cache = LRU::<String>::new(10);
+        let payload = "Hello World".to_string();
+        assert_eq!(cache.count, 0);
+        let r = cache.set(0, payload.clone());
+        assert_eq!(cache.count, 1);
+        assert!(r.is_ok());
+        let r = cache.get(0);
+        assert!(r.is_some());
+        let r = r.unwrap();
+        assert_eq!(r, &payload);
+        assert_eq!(cache.head, cache.tail);
+    }
+
+    #[test]
+    fn test_cache() {
+        let mut cache = LRU::<String>::new(10);
+        let payload = "Hello World".to_string();
+        assert_eq!(cache.count, 0);
+        let r = cache.set(0, payload.clone());
+        assert!(r.is_ok());
+        assert_eq!(cache.count, 1);
+        let r = cache.set(1, payload.clone());
+        assert!(r.is_ok());
+        assert_eq!(cache.count, 2);
+
+        assert!(!cache.head.is_null());
+        assert!(!cache.tail.is_null());
+        unsafe {
+            assert_eq!((*cache.head).key, 1);
+            assert_eq!((*cache.tail).key, 0);
+        }
+
+        let r = cache.get(0);
+        assert!(r.is_some());
+        let r = r.unwrap();
+        assert_eq!(r, &payload);
+        assert_ne!(cache.head, cache.tail);
+        unsafe {
+            assert_eq!((*cache.head).key, 0);
+            assert_eq!((*cache.tail).key, 1);
+        }
     }
 }
