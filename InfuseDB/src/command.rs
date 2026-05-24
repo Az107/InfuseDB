@@ -36,7 +36,7 @@ impl CommandError {
 impl Command for Collection {
     fn run(&mut self, command: &str) -> Result<DataType, CommandError> {
         let command: Vec<String> = utils::smart_split(command.to_string());
-        let action = command.get(0).ok_or(CommandError::EmptyCommand)?;
+        let action = command.first().ok_or(CommandError::EmptyCommand)?;
         let args: Vec<String> = command.iter().skip(1).cloned().collect();
         return match action.as_str() {
             "list" => Ok(DataType::Document(self.list())),

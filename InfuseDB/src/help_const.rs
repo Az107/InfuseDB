@@ -1,4 +1,4 @@
-pub const HELP_STR_COL: &'static str = r"Collection commands:
+pub const HELP_STR_COL: &str = r"Collection commands:
 
   list
       List all documents in the selected collection.
@@ -19,7 +19,7 @@ pub const HELP_STR_COL: &'static str = r"Collection commands:
   name
       Show the name of the currently selected collection.";
 
-pub const HELP_STR_MAIN: &'static str = r"Available commands:
+pub const HELP_STR_MAIN: &str = r"Available commands:
 
     help
         Show this help message.

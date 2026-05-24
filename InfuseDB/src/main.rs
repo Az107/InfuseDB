@@ -68,12 +68,12 @@ fn main() {
             let mut buffer = String::new();
             let _ = io::stdin().read_line(&mut buffer);
             let command: Vec<String> = utils::smart_split(buffer.clone());
-            let action = command.get(0);
+            let action = command.first();
             if action.is_none() {
                 continue;
             }
             let action = action.unwrap();
-            let args = if command.len() > 0 {
+            let args = if !command.is_empty() {
                 command.clone()[1..].to_vec()
             } else {
                 Vec::new()
@@ -82,7 +82,7 @@ fn main() {
             if action == "exit" {
                 break;
             } else if action == "select" {
-                if args.len() >= 1 && db.get_collection_list().contains(&args[0]) {
+                if !args.is_empty() && db.get_collection_list().contains(&args[0]) {
                     selected = args[0].clone()
                 } else {
                     println!("Collection don't exists");
@@ -98,7 +98,7 @@ fn main() {
                 continue;
             } else if action == "del_col" {
                 if selected.is_empty() {
-                    if args.len() != 0 {
+                    if !args.is_empty() {
                         selected = args[0].clone();
                     } else {
                         println!("No collection selected");
@@ -108,7 +108,7 @@ fn main() {
                 db.remove_collection(selected);
                 selected = String::new();
             } else if action == "new" {
-                if args.len() != 0 {
+                if !args.is_empty() {
                     let _ = db.create_collection(&args[0]);
                 } else {
                     println!("No collection name provided");
@@ -131,14 +131,14 @@ fn main() {
                 continue;
             }
 
-            if selected == "" {
+            if selected.is_empty() {
                 println!("No collection selected");
                 continue;
             }
             let collection = db.get_collection(selected.as_str()).unwrap();
             let r = collection.run(&buffer);
             let output = match r {
-                Ok(result) => format!("{}", format_data_type(result, 0)),
+                Ok(result) => format_data_type(result, 0),
                 Err(err) => format!("{:?}", err.to_string()),
             };
             println!("{}", output);
@@ -165,10 +165,10 @@ fn main() {
             return;
         }
         let collection = db.get_collection(&collection_name).unwrap();
-        let r = collection.run(&command);
+        let r = collection.run(command);
         let output = match r {
-            Ok(result) => format!("{}", format_data_type(result, 0)),
-            Err(err) => format!("{}", err.to_string()),
+            Ok(result) => format_data_type(result, 0),
+            Err(err) => err.to_string(),
         };
         println!("{}", output);
     }

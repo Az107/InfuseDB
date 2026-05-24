@@ -1,4 +1,4 @@
-use std::usize;
+use std::fmt::Display;
 
 // Written by Alberto Ruiz 2024-03-08
 // The data type module will provide the data types for the InfuseDB
@@ -94,7 +94,7 @@ impl DataType {
                         result.push(item.clone());
                     }
                 }
-                return Some(DataType::Array(result));
+                Some(DataType::Array(result))
             }
 
             _ => None,
@@ -257,8 +257,8 @@ impl DataType {
                 if !sub_raw.is_empty() {
                     let t = Self::infer_type(&sub_raw);
                     let r = Self::load(t, sub_raw.clone());
-                    if r.is_some() {
-                        new_vec.push(r.unwrap());
+                    if let Some(r) = r {
+                        new_vec.push(r);
                     }
                 }
 
@@ -282,8 +282,8 @@ impl DataType {
                         if chr == ',' && open_array == 0 && !open_string && open_bracket == 0 {
                             let t = Self::infer_type(&value);
                             let r = Self::load(t, value.clone());
-                            if r.is_some() {
-                                d.insert(key.trim().to_string(), r.unwrap());
+                            if let Some(r) = r {
+                                d.insert(key.trim().to_string(), r);
                                 key = String::new();
                                 value = String::new();
                                 key_done = false;
@@ -315,8 +315,8 @@ impl DataType {
                 if !key.is_empty() && !value.is_empty() {
                     let t = Self::infer_type(&value);
                     let r = Self::load(t, value.clone());
-                    if r.is_some() {
-                        d.insert(key.trim().to_string(), r.unwrap());
+                    if let Some(r) = r {
+                        d.insert(key.trim().to_string(), r);
                     }
                 }
                 Some(DataType::Document(d))
@@ -328,7 +328,7 @@ impl DataType {
     pub fn to_json(&self) -> String {
         match self {
             DataType::Id(id) => id.to_string(),
-            DataType::Text(text) => format!("\"{}\"", text.to_string()),
+            DataType::Text(text) => format!("\"{}\"", text),
             DataType::Number(number) => number.to_string(),
             DataType::Boolean(boolean) => boolean.to_string(),
             DataType::Array(array) => {
@@ -361,13 +361,13 @@ impl DataType {
     }
 }
 
-impl ToString for DataType {
-    fn to_string(&self) -> String {
+impl Display for DataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DataType::Id(id) => id.to_string(),
-            DataType::Text(text) => format!("\"{}\"", text.to_string()),
-            DataType::Number(number) => number.to_string(),
-            DataType::Boolean(boolean) => boolean.to_string(),
+            DataType::Id(id) => write!(f, "{}", id),
+            DataType::Text(text) => write!(f, "\"{}\"", text),
+            DataType::Number(number) => write!(f, "{}", number),
+            DataType::Boolean(boolean) => write!(f, "{}", boolean),
             DataType::Array(array) => {
                 let mut result = String::new();
                 result.push('[');
@@ -377,13 +377,13 @@ impl ToString for DataType {
                 }
                 let mut result = result.strip_suffix(", ").unwrap_or(&result).to_string();
                 result.push(']');
-                result
+                write!(f, "{}", result)
             }
             DataType::Document(document) => {
                 let mut result = String::new();
                 result.push('{');
                 for (key, value) in document {
-                    result.push_str(&key);
+                    result.push_str(key);
                     result.push_str(": ");
                     result.push_str(&value.to_string());
                     result.push_str(", ");
@@ -392,7 +392,7 @@ impl ToString for DataType {
                 result.pop();
                 result.push('}');
 
-                result
+                write!(f, "{}", result)
             }
         }
     }

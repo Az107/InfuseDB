@@ -43,12 +43,8 @@ impl ArgSearch for BetterArg {
     }
 
     fn get_index(&self, index: usize) -> Option<(String, String)> {
-        let r = self.get(index);
-        if r.is_none() {
-            return None;
-        }
+        let r = self.get(index)?;
 
-        let r = r.unwrap();
         let touple = match r {
             Arg::Simple(a) => (a.clone(), String::new()),
             Arg::Couple(k, v) => (k.clone(), v.clone()),
@@ -65,7 +61,7 @@ impl ArgSearch for BetterArg {
                 Arg::Couple(_, _) => {}
             }
         }
-        return count;
+        count
     }
 
     fn count_couple(&self) -> usize {
@@ -76,7 +72,7 @@ impl ArgSearch for BetterArg {
                 Arg::Couple(_, _) => count += 1,
             }
         }
-        return count;
+        count
     }
 
     fn get_single_joined(&self) -> Vec<String> {
@@ -86,8 +82,8 @@ impl ArgSearch for BetterArg {
         for item in self {
             match item {
                 Arg::Simple(a) => {
-                    arg.push_str(&a);
-                    arg.push_str(" ");
+                    arg.push_str(a);
+                    arg.push(' ');
                 }
                 Arg::Couple(_, _) => {
                     if !arg.is_empty() {
@@ -112,8 +108,7 @@ pub fn args_parser() -> BetterArg {
         if arg.starts_with('-') {
             let key = arg;
             let value = args.next();
-            if value.is_some() {
-                let value = value.unwrap();
+            if let Some(value) = value {
                 if value.starts_with('-') {
                     parsed.push(Arg::Simple(key));
                     parsed.push(Arg::Simple(value));

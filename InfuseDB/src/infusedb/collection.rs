@@ -9,7 +9,6 @@ use std::collections::HashMap;
 
 pub type Document = HashMap<String, DataType>;
 
-
 #[macro_export]
 macro_rules! doc {
   ( $( $key: expr => $value: expr ),* ) => {
@@ -47,13 +46,12 @@ impl Collection {
         Collection {
             name: name.to_string(),
             data: DataType::Document(Document::new()),
-            //b_tree: BNode::new(),
         }
     }
 
     pub fn add(&mut self, key: &str, value: DataType) -> &mut Self {
         let _ = self.data.set(key, value);
-        return self;
+        self
     }
 
     pub fn rm(&mut self, key: &str) {
@@ -65,11 +63,11 @@ impl Collection {
     }
 
     pub fn list(&self) -> HashMap<String, DataType> {
-        return self.data.to_document().clone();
+        self.data.to_document().clone()
     }
 
     pub fn get(&mut self, key: &str) -> Option<&DataType> {
-        return self.data.get(key);
+        self.data.get(key)
     }
 
     pub fn dump(&self) -> String {
@@ -88,7 +86,7 @@ impl Collection {
             let line = format!("{} {} {}\n", t, k, v.to_string());
             result.push_str(line.as_str());
         }
-        return result;
+        result
     }
 
     pub fn load(data: &str) -> Collection {
@@ -132,7 +130,7 @@ impl Collection {
             result.add(k.as_str(), v);
         }
 
-        return result;
+        result
     }
 }
 

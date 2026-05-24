@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fs::File,
     io::{Cursor, Error, Read, Seek, SeekFrom, Write},
 };

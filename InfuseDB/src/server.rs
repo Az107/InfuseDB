@@ -149,7 +149,7 @@ impl Server {
                             Ok(n) => {
                                 // procesar datos
                                 let data = &buf[..n];
-                                let cmd = str::from_utf8(&data).unwrap();
+                                let cmd = str::from_utf8(data).unwrap();
                                 let cmd_result: Result<DataType, ProcessError> =
                                     process_cmd(cmd, ctx, &mut self.db);
                                 let result: Result<DataType, String> = match cmd_result {
@@ -173,11 +173,10 @@ impl Server {
                                     },
                                 };
 
-                                let result = if result.is_ok() {
-                                    let r = result.unwrap();
+                                let result = if let Ok(r) = result {
                                     format!("ok: {}", r.to_json())
                                 } else {
-                                    format!("err: {}", result.err().unwrap().to_string())
+                                    format!("err: {}", result.err().unwrap())
                                 };
 
                                 ctx.socket.write_all(result.as_bytes()).unwrap();

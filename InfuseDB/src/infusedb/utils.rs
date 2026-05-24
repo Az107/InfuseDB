@@ -12,24 +12,20 @@ pub fn smart_split(text: String) -> Vec<String> {
                 word_finished = false;
             }
             result.push(word.to_string());
-        } else {
-            if let Some(last) = result.last_mut() {
-                last.push_str(" ");
-                last.push_str(word);
-                let count = last.matches('"').count();
-                let count2 = last.matches("'").count();
-                let count3 =
-                    last.matches("[").count() as isize - last.matches("]").count() as isize;
-                let count4 =
-                    word.matches("{").count() as isize - word.matches("}").count() as isize;
+        } else if let Some(last) = result.last_mut() {
+            last.push(' ');
+            last.push_str(word);
+            let count = last.matches('"').count();
+            let count2 = last.matches("'").count();
+            let count3 = last.matches("[").count() as isize - last.matches("]").count() as isize;
+            let count4 = word.matches("{").count() as isize - word.matches("}").count() as isize;
 
-                if count % 2 != 0 && count2 % 2 != 0 && count3 == 0 && count4 == 0 {
-                    word_finished = true;
-                }
+            if count % 2 != 0 && count2 % 2 != 0 && count3 == 0 && count4 == 0 {
+                word_finished = true;
             }
         }
     }
-    return result;
+    result
 }
 
 #[cfg(test)]

@@ -42,13 +42,7 @@ impl<T> LRU<T> {
     pub fn get(&mut self, id: u32) -> Option<&T> {
         let ptr = *self.map.get(&id)?;
         self.move_to_head(ptr);
-        unsafe {
-            if !ptr.is_null() {
-                Some(&(*ptr).data)
-            } else {
-                None
-            }
-        }
+        unsafe { Some(&(*ptr).data) }
     }
 
     pub fn pin(&mut self, id: u32) -> Result<(), &'static str> {
@@ -62,6 +56,9 @@ impl<T> LRU<T> {
     pub fn unpin(&mut self, id: u32) -> Result<(), &'static str> {
         let ptr = *self.map.get(&id).ok_or("Not found")?;
         unsafe {
+            if (*ptr).pin == 0 {
+                return Err("Not pinned element");
+            }
             (*ptr).pin -= 1;
         }
         Ok(())

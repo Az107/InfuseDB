@@ -2,9 +2,9 @@
 // InfuseDB is a in-memory database,
 // it will store the data in memory and provide a simple API to interact with it
 
-mod FileEngine;
 mod collection;
 mod data_type;
+mod file_engine;
 pub mod utils;
 pub use collection::Collection;
 pub use data_type::DataType;
@@ -12,11 +12,20 @@ pub use data_type::FindOp; //TODO: change to own trait and file
 use std::fs;
 use std::path::Path;
 
-pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct InfuseDB {
     pub path: String,
     collections: Vec<Collection>,
+}
+
+impl Default for InfuseDB {
+    fn default() -> Self {
+        Self {
+            path: "./default.mdb".to_string(),
+            collections: Vec::new(),
+        }
+    }
 }
 
 impl InfuseDB {
@@ -43,10 +52,10 @@ impl InfuseDB {
                 line
             };
 
-            if line.len() == 0 || line.starts_with("#") {
+            if line.is_empty() || line.starts_with("#") {
                 continue;
             }
-            if line.starts_with('[') && line.ends_with(']') && page.len() != 0 {
+            if line.starts_with('[') && line.ends_with(']') && !page.is_empty() {
                 collections.push(Collection::load(page.as_str()));
                 page = String::new();
             }
@@ -68,14 +77,14 @@ impl InfuseDB {
         for collection in self.collections.iter() {
             let page = collection.dump();
             result.push_str(page.as_str());
-            result.push_str("\n");
+            result.push('\n');
         }
         let path = Path::new(&self.path);
-        if !path.exists() {
-            if let Err(e) = fs::File::create(&self.path) {
-                println!("{} {:?}", self.path, e);
-                return Err("Error creating file");
-            }
+        if !path.exists()
+            && let Err(e) = fs::File::create(&self.path)
+        {
+            println!("{} {:?}", self.path, e);
+            return Err("Error creating file");
         }
 
         let r = fs::write(path, result);
@@ -93,22 +102,16 @@ impl InfuseDB {
         } else {
             let collection = Collection::new(name);
             self.collections.push(collection);
-            return Ok(self.collections.last_mut().unwrap());
+            Ok(self.collections.last_mut().unwrap())
         }
     }
 
     pub fn get_collection(&mut self, name: &str) -> Option<&mut Collection> {
         //return a mutable reference to collection
-        let index = self
-            .collections
-            .iter()
-            .position(|x| x.name == name.to_string());
-        if index.is_none() {
-            return None;
-        }
-        let index = index.unwrap();
+        let index = self.collections.iter().position(|x| x.name == name)?;
+
         let c = self.collections.get_mut(index).unwrap();
-        return Some(c);
+        Some(c)
     }
 
     pub fn get_collection_list(&self) -> Vec<String> {
