@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ptr::null_mut};
 
-struct LRU<T> {
+pub struct LRU<T> {
     max_nodes: u32,
     count: u32,
     head: *mut Node<T>,
@@ -64,6 +64,20 @@ impl<T> LRU<T> {
         Ok(())
     }
 
+    pub fn get_evict_candidate(&self) -> Option<u32> {
+        let mut candidate = self.tail;
+        unsafe {
+            while (*candidate).pin == 0 && !candidate.is_null() {
+                candidate = (*candidate).prev
+            }
+            if candidate.is_null() {
+                None
+            } else {
+                Some((*candidate).key)
+            }
+        }
+    }
+
     pub fn write<F, R>(&mut self, id: u32, f: F) -> Option<R>
     where
         F: FnOnce(&mut T) -> R,
@@ -78,7 +92,7 @@ impl<T> LRU<T> {
         }
     }
 
-    fn evict(&mut self) -> Result<(), &'static str> {
+    pub fn evict(&mut self) -> Result<(), &'static str> {
         if self.tail.is_null() {
             return Err("Tail is null");
         }
@@ -160,6 +174,10 @@ impl<T> LRU<T> {
         self.map.insert(key, ptr);
         self.count += 1;
         Ok(())
+    }
+
+    pub fn has(&mut self, key: u32) -> bool {
+        self.map.contains_key(&key)
     }
 }
 

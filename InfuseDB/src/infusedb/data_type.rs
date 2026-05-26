@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Display, write};
 
 // Written by Alberto Ruiz 2024-03-08
 // The data type module will provide the data types for the InfuseDB
@@ -17,12 +17,14 @@ pub enum FindOp {
 
 #[derive(PartialEq, Debug)]
 pub enum DataType {
+    Void,
     Id(Uuid),
     Text(String),
     Number(f32),
     Boolean(bool),
     Array(Vec<DataType>),
     Document(Document),
+    Pointer(u32, u32),
 }
 
 #[macro_export]
@@ -41,12 +43,14 @@ macro_rules! d {
 impl DataType {
     pub fn get_type(&self) -> &str {
         match self {
+            DataType::Void => "void",
             DataType::Id(_) => "id",
             DataType::Text(_) => "text",
             DataType::Number(_) => "number",
             DataType::Boolean(_) => "boolean",
             DataType::Array(_) => "array",
             DataType::Document(_) => "document",
+            DataType::Pointer(_, _) => "pointer",
         }
     }
 
@@ -327,6 +331,7 @@ impl DataType {
 
     pub fn to_json(&self) -> String {
         match self {
+            DataType::Void => String::new(),
             DataType::Id(id) => id.to_string(),
             DataType::Text(text) => format!("\"{}\"", text),
             DataType::Number(number) => number.to_string(),
@@ -357,6 +362,7 @@ impl DataType {
 
                 result
             }
+            DataType::Pointer(_, _) => todo!(),
         }
     }
 }
@@ -364,6 +370,7 @@ impl DataType {
 impl Display for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            DataType::Void => write!(f, ""),
             DataType::Id(id) => write!(f, "{}", id),
             DataType::Text(text) => write!(f, "\"{}\"", text),
             DataType::Number(number) => write!(f, "{}", number),
@@ -394,6 +401,7 @@ impl Display for DataType {
 
                 write!(f, "{}", result)
             }
+            DataType::Pointer(page, offset) => write!(f, "<ptr {},{}>", page, offset),
         }
     }
 }
@@ -450,12 +458,14 @@ impl From<Document> for DataType {
 impl Clone for DataType {
     fn clone(&self) -> Self {
         match self {
+            DataType::Void => DataType::Void,
             DataType::Id(id) => DataType::Id(*id),
             DataType::Text(text) => DataType::Text(text.clone()),
             DataType::Number(number) => DataType::Number(*number),
             DataType::Boolean(boolean) => DataType::Boolean(*boolean),
             DataType::Array(array) => DataType::Array(array.clone()),
             DataType::Document(document) => DataType::Document(document.clone()),
+            DataType::Pointer(p, o) => DataType::Pointer(*p, *o),
         }
     }
 }

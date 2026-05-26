@@ -5,6 +5,7 @@
 mod collection;
 mod data_type;
 mod file_engine;
+mod translator;
 pub mod utils;
 pub use collection::Collection;
 pub use data_type::DataType;

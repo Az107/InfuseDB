@@ -3,50 +3,12 @@ use std::{
     io::{Cursor, Error, Read, Seek, SeekFrom, Write},
 };
 
+use super::utils::{ReadExt, WriteExt};
+
 const MASTER_HEADER_SIZE: usize = 22;
 const PAGE_SIZE: usize = 4096;
 const MAGIC: u32 = 0x54454144;
 const VERSION: u16 = 1;
-
-trait ReadExt: Read {
-    fn read_u8(&mut self) -> Result<u8, Error> {
-        let mut b = [0u8; 1];
-        self.read_exact(&mut b)?;
-        Ok(b[0])
-    }
-
-    fn read_u16_le(&mut self) -> Result<u16, Error> {
-        let mut b = [0u8; 2];
-        self.read_exact(&mut b)?;
-        Ok(u16::from_le_bytes(b))
-    }
-
-    fn read_u32_le(&mut self) -> Result<u32, Error> {
-        let mut b = [0u8; 4];
-        self.read_exact(&mut b)?;
-        Ok(u32::from_le_bytes(b))
-    }
-}
-
-impl ReadExt for Cursor<&Vec<u8>> {}
-
-trait WriteExt: Write {
-    fn write_u8(&mut self, value: u8) -> Result<(), Error> {
-        self.write_all(&[value])
-    }
-
-    fn write_u16_le(&mut self, value: u16) -> Result<(), Error> {
-        let bytes = value.to_le_bytes();
-        self.write_all(&bytes)
-    }
-
-    fn write_u32_le(&mut self, value: u32) -> Result<(), Error> {
-        let bytes = value.to_le_bytes();
-        self.write_all(&bytes)
-    }
-}
-
-impl WriteExt for Cursor<&mut Vec<u8>> {}
 
 pub struct Paginator {
     path: String,
@@ -156,7 +118,7 @@ impl Paginator {
         Ok(page)
     }
 
-    pub fn create_page(&mut self, page_type: PageType, data: &[u8]) -> Result<Page, Error> {
+    pub fn create_page(&mut self, page_type: PageType, data: &[u8]) -> Result<(u32, Page), Error> {
         let page = Page {
             page_type,
             next_page: 0,
@@ -165,9 +127,9 @@ impl Paginator {
             page_size: self.page_size,
         };
         let id = self.alloc_page_id()?;
-        let _ = self.write_page(id, &page);
+        let _ = self.write_page(id, &page)?;
         self.write_header()?;
-        Ok(page)
+        Ok((id, page))
     }
 
     pub fn write_page(&mut self, num: u32, page: &Page) -> Result<(), Error> {
@@ -185,39 +147,39 @@ impl Paginator {
     }
 }
 
-enum PageType {
-    index,
-    data,
-    overflow,
-    free,
+pub enum PageType {
+    Index,
+    Data,
+    Overflow,
+    Free,
 }
 
 impl PageType {
     fn from_u8(code: u8) -> PageType {
         match code {
-            1 => PageType::index,
-            2 => PageType::data,
-            3 => PageType::overflow,
-            4 => PageType::free,
-            _ => PageType::free,
+            1 => PageType::Index,
+            2 => PageType::Data,
+            3 => PageType::Overflow,
+            4 => PageType::Free,
+            _ => PageType::Free,
         }
     }
 
     fn to_u8(&self) -> u8 {
         match self {
-            PageType::index => 1,
-            PageType::data => 2,
-            PageType::overflow => 3,
-            PageType::free => 4,
+            PageType::Index => 1,
+            PageType::Data => 2,
+            PageType::Overflow => 3,
+            PageType::Free => 4,
         }
     }
 }
 
 pub struct Page {
-    page_type: PageType,
-    next_page: u32,
+    pub page_type: PageType,
+    pub next_page: u32,
     data_len: u16,
-    payload: Vec<u8>,
+    pub payload: Vec<u8>,
     page_size: u32,
 }
 
@@ -280,9 +242,9 @@ mod tests {
         let paginator = Paginator::new(&path, PAGE_SIZE as u32);
         assert!(paginator.is_ok());
         let mut paginator = paginator.unwrap();
-        let page = paginator.create_page(PageType::data, "Hello world".as_bytes());
+        let page = paginator.create_page(PageType::Data, "Hello world".as_bytes());
         assert!(page.is_ok());
-        let page = paginator.create_page(PageType::data, "Hello world".as_bytes());
+        let page = paginator.create_page(PageType::Data, "Hello world".as_bytes());
         assert!(page.is_ok());
         drop(paginator);
         let paginator = Paginator::open(&path);
@@ -293,7 +255,7 @@ mod tests {
         let page = paginator.get_page(2);
         // assert!(page.is_ok());
         let page = page.unwrap();
-        assert_eq!(page.page_type.to_u8(), PageType::data.to_u8());
+        assert_eq!(page.page_type.to_u8(), PageType::Data.to_u8());
         assert_eq!(page.payload, "Hello world".as_bytes())
     }
 }
