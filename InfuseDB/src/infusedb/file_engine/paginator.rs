@@ -1,12 +1,13 @@
 use std::{
-    fs::File,
+    fs::{File, OpenOptions},
     io::{Cursor, Error, Read, Seek, SeekFrom, Write},
+    os::raw,
 };
 
 use super::utils::{ReadExt, WriteExt};
 
 const MASTER_HEADER_SIZE: usize = 22;
-const PAGE_SIZE: usize = 4096;
+pub const PAGE_SIZE: usize = 4096;
 const MAGIC: u32 = 0x54454144;
 const VERSION: u16 = 1;
 
@@ -22,19 +23,43 @@ pub struct Paginator {
 
 impl Paginator {
     pub fn new(path: &str, page_size: u32) -> Result<Self, Error> {
-        let _fd = File::create(path)?;
+        let exists = std::path::Path::new(path).exists();
+
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(path)?;
 
         let mut paginator = Paginator {
             path: path.to_string(),
-            file: _fd,
+            file,
             version: VERSION,
             page_size,
             total_pages: 0,
             free_list: 0xffffffff,
             col_index: 0xffffffff,
         };
-        paginator.write_header()?;
+        if exists {
+            paginator.read_header()?; // cargar estado existente
+        } else {
+            paginator.write_header()?; // inicializar desde cero
+        }
         Ok(paginator)
+    }
+
+    fn read_header(&mut self) -> Result<(), Error> {
+        let data = Paginator::read_chunk(&mut self.file, 0, MASTER_HEADER_SIZE)?;
+        let mut cur = Cursor::new(&data);
+        let magic = cur.read_u32_le()?;
+        assert_eq!(magic, MAGIC);
+        self.version = cur.read_u16_le()?;
+        self.page_size = cur.read_u32_le()?;
+        self.total_pages = cur.read_u32_le()?;
+        self.free_list = cur.read_u32_le()?;
+        self.col_index = cur.read_u32_le()?;
+        Ok(())
     }
 
     fn write_header(&mut self) -> Result<(), Error> {
@@ -111,7 +136,7 @@ impl Paginator {
             payload: Vec::new(),
             page_size: self.page_size,
         };
-
+        println!("{:?}", page.data_len);
         page.payload.resize(page.data_len as usize, 0);
         cur.read_exact(&mut page.payload)?;
 
@@ -127,6 +152,7 @@ impl Paginator {
             page_size: self.page_size,
         };
         let id = self.alloc_page_id()?;
+
         let _ = self.write_page(id, &page)?;
         self.write_header()?;
         Ok((id, page))
@@ -136,6 +162,7 @@ impl Paginator {
         self.file
             .seek(SeekFrom::Start((self.page_size * num) as u64))?;
         page.write_to(&mut self.file)?;
+        self.file.flush()?;
         Ok(())
     }
 
@@ -147,6 +174,7 @@ impl Paginator {
     }
 }
 
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum PageType {
     Index,
     Data,
@@ -175,6 +203,7 @@ impl PageType {
     }
 }
 
+#[derive(Clone)]
 pub struct Page {
     pub page_type: PageType,
     pub next_page: u32,
@@ -196,6 +225,19 @@ impl Page {
         buf.extend_from_slice(&self.payload);
 
         buf
+    }
+
+    pub fn append(&mut self, data: Vec<u8>) -> Result<(), Error> {
+        let new_size = self.payload.len() + data.len() + 1 + 4 + 2;
+        if new_size as u32 > self.page_size {
+            return Err(Error::new(
+                std::io::ErrorKind::FileTooLarge,
+                "Data too large",
+            ));
+        }
+        self.payload.append(&mut data.clone());
+        self.data_len = self.payload.len() as u16;
+        Ok(())
     }
 
     // zero-copy solution to write pages to the file

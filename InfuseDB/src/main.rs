@@ -41,24 +41,19 @@ fn format_data_type(data: DataType, sub: u32) -> String {
 }
 
 fn main() {
-    let mut db = InfuseDB::new();
+    let mut db = InfuseDB::new("./default.tdb");
     let args = args_parser();
-    let path = args.get_key("-p").unwrap_or(DEFAULT_PATH.to_string());
-    let home = env::home_dir().unwrap();
-    let home = home.to_str().unwrap();
-    let path = path.replace("~", home);
     let collection_name = args
         .get_key("-c")
         .unwrap_or(DEFAULT_COLLECTION_NAME.to_string());
 
-    if !Path::new(&path).exists() {
-        db.path = path.to_string();
-    } else {
-        db = InfuseDB::load(&path).unwrap();
-    }
     println!("InfuseDB {}", VERSION);
     if db.get_collection(&collection_name).is_none() {
-        let _ = db.create_collection(&collection_name);
+        let r = db.create_collection(&collection_name);
+        if let Err(err) = r {
+            println!("Error creating db: {}", err.to_string());
+            return;
+        }
     }
     let mut selected = String::new();
     if args.count_simple() == 0 {
@@ -115,12 +110,7 @@ fn main() {
                 }
                 continue;
             } else if action == "commit" {
-                let r = db.dump();
-                if r.is_err() {
-                    println!("Error saving changes: {}", r.err().unwrap());
-                } else {
-                    println!("Changed saved");
-                }
+                println!("Not implemented!");
                 continue;
             } else if action == "help" {
                 if selected.is_empty() {
@@ -135,7 +125,7 @@ fn main() {
                 println!("No collection selected");
                 continue;
             }
-            let collection = db.get_collection(selected.as_str()).unwrap();
+            let mut collection = db.get_collection(selected.as_str()).unwrap();
             let r = collection.run(&buffer);
             let output = match r {
                 Ok(result) => format_data_type(result, 0),
@@ -164,7 +154,7 @@ fn main() {
             println!("{}", help_const::HELP_STR_COL);
             return;
         }
-        let collection = db.get_collection(&collection_name).unwrap();
+        let mut collection = db.get_collection(&collection_name).unwrap();
         let r = collection.run(command);
         let output = match r {
             Ok(result) => format_data_type(result, 0),
@@ -173,5 +163,5 @@ fn main() {
         println!("{}", output);
     }
 
-    let _ = db.dump();
+    db.commit()
 }

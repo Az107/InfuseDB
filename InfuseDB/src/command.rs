@@ -50,7 +50,7 @@ impl Command for Collection {
                 let value = args.get(1).unwrap().to_string();
                 let t = DataType::infer_type(&value);
                 let d = DataType::load(t, value).ok_or(CommandError::ErrorParsing)?;
-                let mut parent = &mut self.data;
+                let mut parent = &mut self.get(keys.first().unwrap()).unwrap();
                 let inter_keys = keys[0..keys.len() - 1].to_vec();
                 for i in 0..inter_keys.len() {
                     let k = inter_keys[i];
@@ -96,7 +96,7 @@ impl Command for Collection {
 
                 let get_result = if proto_key.contains('.') {
                     let mut name = "key".to_string();
-                    let mut value_pointer = value;
+                    let mut value_pointer = &value;
 
                     for arg_i in 1..keys.len() {
                         let i = keys.get(arg_i).unwrap().to_string();

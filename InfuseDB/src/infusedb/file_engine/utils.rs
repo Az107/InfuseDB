@@ -49,7 +49,7 @@ pub trait ReadExt: Read {
     }
 
     fn read_string(&mut self) -> Result<String, Error> {
-        let len = self.read_u32_le()? as usize;
+        let len = self.read_u8()? as usize;
         let mut buf = vec![0u8; len];
         self.read_exact(&mut buf)?;
         String::from_utf8(buf)
@@ -72,6 +72,10 @@ pub trait WriteExt: Write {
     fn write_u32_le(&mut self, value: u32) -> Result<(), Error> {
         let bytes = value.to_le_bytes();
         self.write_all(&bytes)
+    }
+
+    fn write_string(&mut self, data: String) -> Result<String, Error> {
+        todo!()
     }
 }
 

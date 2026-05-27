@@ -183,6 +183,13 @@ impl DataType {
         }
     }
 
+    pub fn to_pointer(&self) -> (u32, u32) {
+        match self {
+            DataType::Pointer(p, o) => (*p, *o),
+            _ => panic!("Not a Pointer"),
+        }
+    }
+
     pub fn infer_type(raw: &str) -> u16 {
         let raw = raw.trim();
         if Uuid::parse_str(raw).is_ok() {

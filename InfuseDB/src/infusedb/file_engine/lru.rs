@@ -1,4 +1,8 @@
-use std::{collections::HashMap, ptr::null_mut};
+use std::{
+    collections::HashMap,
+    io::{Error, ErrorKind},
+    ptr::null_mut,
+};
 
 pub struct LRU<T> {
     max_nodes: u32,
@@ -45,19 +49,31 @@ impl<T> LRU<T> {
         unsafe { Some(&(*ptr).data) }
     }
 
-    pub fn pin(&mut self, id: u32) -> Result<(), &'static str> {
-        let ptr = *self.map.get(&id).ok_or("Not found")?;
+    pub fn get_mut(&mut self, id: u32) -> Option<&mut T> {
+        let ptr = *self.map.get(&id)?;
+        self.move_to_head(ptr);
+        unsafe { Some(&mut (*ptr).data) }
+    }
+
+    pub fn pin(&mut self, id: u32) -> Result<(), Error> {
+        let ptr = *self
+            .map
+            .get(&id)
+            .ok_or(Error::new(ErrorKind::NotFound, "Not found"))?;
         unsafe {
             (*ptr).pin += 1;
         }
         Ok(())
     }
 
-    pub fn unpin(&mut self, id: u32) -> Result<(), &'static str> {
-        let ptr = *self.map.get(&id).ok_or("Not found")?;
+    pub fn unpin(&mut self, id: u32) -> Result<(), Error> {
+        let ptr = *self
+            .map
+            .get(&id)
+            .ok_or(Error::new(ErrorKind::NotFound, "Not found"))?;
         unsafe {
             if (*ptr).pin == 0 {
-                return Err("Not pinned element");
+                return Err(Error::new(ErrorKind::InvalidData, "Not pinned element"));
             }
             (*ptr).pin -= 1;
         }
@@ -67,7 +83,7 @@ impl<T> LRU<T> {
     pub fn get_evict_candidate(&self) -> Option<u32> {
         let mut candidate = self.tail;
         unsafe {
-            while (*candidate).pin == 0 && !candidate.is_null() {
+            while !candidate.is_null() && (*candidate).pin == 0 {
                 candidate = (*candidate).prev
             }
             if candidate.is_null() {
@@ -92,9 +108,9 @@ impl<T> LRU<T> {
         }
     }
 
-    pub fn evict(&mut self) -> Result<(), &'static str> {
+    pub fn evict(&mut self) -> Result<(), Error> {
         if self.tail.is_null() {
-            return Err("Tail is null");
+            return Err(Error::new(ErrorKind::AddrNotAvailable, "Tail is Null"));
         }
         let mut candidate = self.tail;
         unsafe {
@@ -105,7 +121,10 @@ impl<T> LRU<T> {
                 candidate = (*candidate).prev;
             }
             if candidate.is_null() {
-                return Err("no candidate found, all elements pinned");
+                return Err(Error::new(
+                    ErrorKind::OutOfMemory,
+                    "Not evictable elements found",
+                ));
             }
             self.detach(candidate);
             self.count -= 1;
@@ -164,7 +183,7 @@ impl<T> LRU<T> {
         }
     }
 
-    pub fn set(&mut self, key: u32, data: T) -> Result<(), &'static str> {
+    pub fn set(&mut self, key: u32, data: T) -> Result<(), Error> {
         if self.count >= self.max_nodes {
             self.evict()?;
         }
