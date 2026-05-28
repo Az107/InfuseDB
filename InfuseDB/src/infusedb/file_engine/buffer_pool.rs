@@ -12,11 +12,7 @@ pub struct BufferPool {
 
 impl BufferPool {
     pub fn new(path: &str) -> Result<Self, Error> {
-        let paginator = if fs::exists(path).unwrap() {
-            Paginator::open(path)?
-        } else {
-            Paginator::new(path, (PAGE_SIZE * 2) as u32)?
-        };
+        let paginator = Paginator::new(path, (PAGE_SIZE * 2) as u32)?;
         Ok(BufferPool {
             cache: LRU::new(10),
             paginator,
@@ -32,10 +28,13 @@ impl BufferPool {
     }
 
     pub fn flush_all(&mut self) -> Result<(), Error> {
+        let mut flushed = 0;
         while let Some(page_id) = self.cache.get_evict_candidate() {
+            flushed += 1;
             self.flush(page_id)?;
-            self.cache.evict()?;
+            self.cache.evict().expect("Error evicting");
         }
+        println!("{} pages evicted", flushed);
         Ok(())
     }
 

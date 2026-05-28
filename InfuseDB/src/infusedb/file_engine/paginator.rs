@@ -108,7 +108,11 @@ impl Paginator {
     }
 
     pub fn open(path: &str) -> Result<Self, Error> {
-        let mut file = File::open(path)?; // TODO: improve error handling
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .truncate(false)
+            .open(path)?; // TODO: improve error handling
         let header_bytes = Paginator::read_chunk(&mut file, 0, MASTER_HEADER_SIZE)?;
         let mut cur = Cursor::new(&header_bytes);
         assert_eq!(cur.read_u32_le()?, MAGIC);
@@ -136,7 +140,6 @@ impl Paginator {
             payload: Vec::new(),
             page_size: self.page_size,
         };
-        println!("{:?}", page.data_len);
         page.payload.resize(page.data_len as usize, 0);
         cur.read_exact(&mut page.payload)?;
 
@@ -161,6 +164,7 @@ impl Paginator {
     pub fn write_page(&mut self, num: u32, page: &Page) -> Result<(), Error> {
         self.file
             .seek(SeekFrom::Start((self.page_size * num) as u64))?;
+
         page.write_to(&mut self.file)?;
         self.file.flush()?;
         Ok(())

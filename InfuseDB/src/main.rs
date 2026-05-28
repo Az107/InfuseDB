@@ -104,7 +104,11 @@ fn main() {
                 selected = String::new();
             } else if action == "new" {
                 if !args.is_empty() {
-                    let _ = db.create_collection(&args[0]);
+                    let r = db.create_collection(&args[0]);
+
+                    if r.is_err() {
+                        println!("{:?}", r.err());
+                    }
                 } else {
                     println!("No collection name provided");
                 }

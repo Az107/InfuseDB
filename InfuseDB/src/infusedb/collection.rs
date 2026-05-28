@@ -88,10 +88,6 @@ impl Collection {
         let pointer = self.index.get(key)?.to_pointer();
         expand_pointer(&mut self.buffer_pool.borrow_mut(), pointer.0, pointer.1).ok()
     }
-
-    pub fn dump(&self) -> String {
-        todo!()
-    }
 }
 
 //TEST

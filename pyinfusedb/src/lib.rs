@@ -2,7 +2,7 @@ use infusedb::InfuseDB;
 use pyo3::{
     exceptions::{PyFileNotFoundError, PyValueError},
     prelude::*,
-    types::{PyDict, PyFloat, PyList, PyString},
+    types::{PyDict, PyFloat, PyList, PyNone, PyString},
     IntoPyObjectExt,
 };
 use std::sync::{Arc, Mutex};
@@ -72,6 +72,8 @@ impl InfuseDBpy {
 
 fn convert_data_type(py: Python<'_>, value: &infusedb::DataType) -> PyResult<PyObject> {
     match value {
+        infusedb::DataType::Void => todo!(),
+        infusedb::DataType::Pointer(_, _) => todo!(),
         infusedb::DataType::Id(uuid) => Ok(PyString::new(py, &uuid.to_string()).into()),
         infusedb::DataType::Text(text) => Ok(PyString::new(py, text).into()),
         infusedb::DataType::Number(n) => Ok(PyFloat::new(py, *n as f64).into()),
