@@ -61,10 +61,22 @@ impl Collection {
         }
     }
 
-    pub fn add(&mut self, key: &str, value: DataType) -> Result<(), Error> {
+    fn reindex(&mut self) {
+        //This function should
+        // - [ ] clear index page
+        // - [ ] scan all the data page
+        // - [ ] obtain all the pointers of each key
+        // - [ ] rebuild index
+        //
+        //
+        todo!();
+    }
+
+    pub fn set(&mut self, key: &str, value: DataType) -> Result<(), Error> {
         let pointer = self.data.set(key, value)?;
+        let pointer_v = pointer.1 + key.len() as u32 + 1;
         self.index
-            .set(key, DataType::Pointer(pointer.0, pointer.1))?;
+            .set(key, DataType::Pointer(pointer.0, pointer_v))?;
         Ok(())
     }
 
@@ -79,7 +91,7 @@ impl Collection {
     pub fn list(&self) -> HashMap<String, DataType> {
         let mut list = HashMap::new();
         for item in self.index.list() {
-            list.insert(item, DataType::Text("niputaidea".to_string()));
+            list.insert(item, DataType::Void);
         }
         list
     }

@@ -141,7 +141,8 @@ pub fn expand_pointer(bp: &mut BufferPool, page_id: u32, offset: u32) -> Result<
             .payload
     };
     let mut cur = Cursor::new(data);
-    cur.set_position(offset as u64);
+    cur.set_position((offset) as u64);
+    println!("{} {}", page_id, offset);
     let item = value_parser(&mut cur)?;
     match item {
         DataType::Void => {

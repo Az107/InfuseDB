@@ -49,7 +49,7 @@ impl Command for Collection {
                 let value = args.get(1).unwrap().to_string();
                 let t = DataType::infer_type(&value);
                 let d = DataType::load(t, value).ok_or(CommandError::ErrorParsing)?;
-                match self.add(key, d) {
+                match self.set(key, d) {
                     Ok(_) => Ok(DataType::Text("Ok".to_string())),
                     Err(err) => {
                         println!("Error adding: {:?}", err);

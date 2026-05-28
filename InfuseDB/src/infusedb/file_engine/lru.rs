@@ -17,7 +17,7 @@ struct Node<T> {
     prev: *mut Node<T>,
     data: T,
     key: u32,
-    pin: usize,
+    pin: bool,
 }
 
 impl<T> Node<T> {
@@ -27,7 +27,7 @@ impl<T> Node<T> {
             prev: null_mut(),
             data,
             key,
-            pin: 0,
+            pin: false,
         }
     }
 }
@@ -61,7 +61,7 @@ impl<T> LRU<T> {
             .get(&id)
             .ok_or(Error::new(ErrorKind::NotFound, "Not found"))?;
         unsafe {
-            (*ptr).pin += 1;
+            (*ptr).pin = true;
         }
         Ok(())
     }
@@ -72,10 +72,7 @@ impl<T> LRU<T> {
             .get(&id)
             .ok_or(Error::new(ErrorKind::NotFound, "Not found"))?;
         unsafe {
-            if (*ptr).pin == 0 {
-                return Err(Error::new(ErrorKind::InvalidData, "Not pinned element"));
-            }
-            (*ptr).pin -= 1;
+            (*ptr).pin = false;
         }
         Ok(())
     }
@@ -83,7 +80,7 @@ impl<T> LRU<T> {
     pub fn get_evict_candidate(&self) -> Option<u32> {
         let mut candidate = self.tail;
         unsafe {
-            while !candidate.is_null() && (*candidate).pin == 0 {
+            while !candidate.is_null() && !(*candidate).pin {
                 candidate = (*candidate).prev
             }
             if candidate.is_null() {
@@ -101,9 +98,10 @@ impl<T> LRU<T> {
         let ptr = *self.map.get(&id)?;
         self.move_to_head(ptr);
         unsafe {
-            (*ptr).pin += 1;
+            let old_state = (*ptr).pin;
+            (*ptr).pin = true;
             let result = f(&mut (*ptr).data);
-            (*ptr).pin -= 1;
+            (*ptr).pin = old_state;
             Some(result)
         }
     }
@@ -115,7 +113,7 @@ impl<T> LRU<T> {
         let mut candidate = self.tail;
         unsafe {
             while !candidate.is_null() {
-                if (*candidate).pin == 0 {
+                if !(*candidate).pin {
                     break;
                 }
                 candidate = (*candidate).prev;

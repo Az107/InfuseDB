@@ -77,10 +77,10 @@ impl InfuseDB {
     }
 
     pub fn commit(&self) {
-        self.buffer_pool
-            .borrow_mut()
-            .flush_all()
-            .expect("Error flushing all to the disk");
+        let r = self.buffer_pool.borrow_mut().flush_all();
+        if let Err(e) = r {
+            println!("Error evicting pages: {:?}", e);
+        }
     }
 }
 

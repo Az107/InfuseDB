@@ -32,7 +32,7 @@ impl BufferPool {
         while let Some(page_id) = self.cache.get_evict_candidate() {
             flushed += 1;
             self.flush(page_id)?;
-            self.cache.evict().expect("Error evicting");
+            self.cache.evict()?;
         }
         println!("{} pages evicted", flushed);
         Ok(())
